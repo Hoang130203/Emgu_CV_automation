@@ -14,6 +14,9 @@
         FontFamily="Segoe UI">
 
     <Window.Resources>
+        <!-- Null to Visible Converter -->
+        <local:NullToVisibilityConverter x:Key="NullToVisibleConverter"/>
+
         <!-- Responsive Grid Splitter Style -->
         <Style x:Key="ResponsiveGridSplitter" TargetType="GridSplitter">
             <Setter Property="Background" Value="Transparent"/>
@@ -397,45 +400,6 @@
                                 </StackPanel>
                             </Button>
 
-                            <Button Command="{Binding CaptureScreenshotCommand}"
-                                    Height="44"
-                                    Cursor="Hand"
-                                    Background="Transparent"
-                                    BorderBrush="#f093fb"
-                                    BorderThickness="2"
-                                    FontWeight="SemiBold">
-                                <Button.Style>
-                                    <Style TargetType="Button">
-                                        <Setter Property="Template">
-                                            <Setter.Value>
-                                                <ControlTemplate TargetType="Button">
-                                                    <Border Background="{TemplateBinding Background}"
-                                                            BorderBrush="{TemplateBinding BorderBrush}"
-                                                            BorderThickness="{TemplateBinding BorderThickness}"
-                                                            CornerRadius="10"
-                                                            Padding="12,0">
-                                                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                                    </Border>
-                                                </ControlTemplate>
-                                            </Setter.Value>
-                                        </Setter>
-                                        <Setter Property="Foreground" Value="#f093fb"/>
-                                        <Style.Triggers>
-                                            <Trigger Property="IsMouseOver" Value="True">
-                                                <Setter Property="Background">
-                                                    <Setter.Value>
-                                                        <SolidColorBrush Color="#f093fb" Opacity="0.1"/>
-                                                    </Setter.Value>
-                                                </Setter>
-                                            </Trigger>
-                                        </Style.Triggers>
-                                    </Style>
-                                </Button.Style>
-                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                                    <materialDesign:PackIcon Kind="Camera" Width="16" Height="16" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                                    <TextBlock Text="Screenshot" FontSize="12" VerticalAlignment="Center"/>
-                                </StackPanel>
-                            </Button>
                         </StackPanel>
                     </ScrollViewer>
                 </Border>
@@ -471,11 +435,12 @@
                                         BorderThickness="2" CornerRadius="16">
                                     <Viewbox Stretch="Uniform" Margin="16">
                                         <Grid Width="800" Height="450">
-                                            <Image x:Name="ScreenPreview" Stretch="Uniform"/>
-                                            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                                            <Image x:Name="ScreenPreview" Source="{Binding ScreenPreview}" Stretch="Uniform"/>
+                                            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                       Visibility="{Binding ScreenPreview, Converter={StaticResource NullToVisibleConverter}, FallbackValue=Visible}">
                                                 <materialDesign:PackIcon Kind="MonitorScreenshot" Width="64" Height="64" Foreground="#b2bec3" Margin="0,0,0,16"/>
                                                 <TextBlock Text="No preview available" FontSize="16" FontWeight="SemiBold" Foreground="#636e72" HorizontalAlignment="Center"/>
-                                                <TextBlock Text="Start the bot to see live detection" FontSize="13" Foreground="#b2bec3" HorizontalAlignment="Center" Margin="0,4,0,0" TextWrapping="Wrap" TextAlignment="Center" MaxWidth="300"/>
+                                                <TextBlock Text="Click 'Screenshot' to capture or start the bot" FontSize="13" Foreground="#b2bec3" HorizontalAlignment="Center" Margin="0,4,0,0" TextWrapping="Wrap" TextAlignment="Center" MaxWidth="300"/>
                                             </StackPanel>
                                         </Grid>
                                     </Viewbox>
@@ -555,13 +520,18 @@
                                                 <DataGridTemplateColumn.CellTemplate>
                                                     <DataTemplate>
                                                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                                                            <Button Style="{StaticResource MaterialDesignIconButton}" Width="28" Height="28" Padding="0">
-                                                                <materialDesign:PackIcon Kind="Play" Width="14" Height="14"/>
+                                                            <Button Command="{Binding PlayCommand}"
+                                                                    Style="{StaticResource MaterialDesignIconButton}"
+                                                                    Width="28" Height="28" Padding="0"
+                                                                    ToolTip="Run this workflow">
+                                                                <materialDesign:PackIcon Kind="Play" Width="14" Height="14" Foreground="#56ab2f"/>
                                                             </Button>
-                                                            <Button Style="{StaticResource MaterialDesignIconButton}" Width="28" Height="28" Padding="0">
+                                                            <Button Style="{StaticResource MaterialDesignIconButton}" Width="28" Height="28" Padding="0"
+                                                                    ToolTip="Edit workflow">
                                                                 <materialDesign:PackIcon Kind="Pencil" Width="14" Height="14"/>
                                                             </Button>
-                                                            <Button Style="{StaticResource MaterialDesignIconButton}" Width="28" Height="28" Padding="0">
+                                                            <Button Style="{StaticResource MaterialDesignIconButton}" Width="28" Height="28" Padding="0"
+                                                                    ToolTip="Delete workflow">
                                                                 <materialDesign:PackIcon Kind="Delete" Width="14" Height="14"/>
                                                             </Button>
                                                         </StackPanel>
