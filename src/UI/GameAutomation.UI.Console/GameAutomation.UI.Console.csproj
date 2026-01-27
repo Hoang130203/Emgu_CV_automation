@@ -1,0 +1,17 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Core\GameAutomation.Core.Bot\GameAutomation.Core.Bot.csproj" />
+    <ProjectReference Include="..\..\Core\GameAutomation.Core.Models\GameAutomation.Core.Models.csproj" />
+    <ProjectReference Include="..\..\Core\GameAutomation.Core.Services\GameAutomation.Core.Services.csproj" />
+    <ProjectReference Include="..\..\Core\GameAutomation.Core.Workflows\GameAutomation.Core.Workflows.csproj" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+</Project>

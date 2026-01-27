@@ -1,0 +1,92 @@
+﻿<Application x:Class="GameAutomation.UI.WPF.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:GameAutomation.UI.WPF"
+             xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+             StartupUri="MainWindow.xaml">
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <materialDesign:BundledTheme BaseTheme="Light" PrimaryColor="DeepPurple" SecondaryColor="Amber" />
+                <ResourceDictionary Source="pack://application:,,,/MaterialDesignThemes.Wpf;component/Themes/MaterialDesign3.Defaults.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+
+            <!-- Gradient Brushes -->
+            <LinearGradientBrush x:Key="PrimaryGradient" StartPoint="0,0" EndPoint="1,1">
+                <GradientStop Color="#667eea" Offset="0"/>
+                <GradientStop Color="#764ba2" Offset="1"/>
+            </LinearGradientBrush>
+
+            <LinearGradientBrush x:Key="SecondaryGradient" StartPoint="0,0" EndPoint="1,1">
+                <GradientStop Color="#f093fb" Offset="0"/>
+                <GradientStop Color="#f5576c" Offset="1"/>
+            </LinearGradientBrush>
+
+            <LinearGradientBrush x:Key="AccentGradient" StartPoint="0,0" EndPoint="1,1">
+                <GradientStop Color="#4facfe" Offset="0"/>
+                <GradientStop Color="#00f2fe" Offset="1"/>
+            </LinearGradientBrush>
+
+            <LinearGradientBrush x:Key="SuccessGradient" StartPoint="0,0" EndPoint="1,1">
+                <GradientStop Color="#56ab2f" Offset="0"/>
+                <GradientStop Color="#a8e063" Offset="1"/>
+            </LinearGradientBrush>
+
+            <LinearGradientBrush x:Key="HeaderGradient" StartPoint="0,0" EndPoint="1,0">
+                <GradientStop Color="#667eea" Offset="0"/>
+                <GradientStop Color="#764ba2" Offset="0.5"/>
+                <GradientStop Color="#f093fb" Offset="1"/>
+            </LinearGradientBrush>
+
+            <!-- Text Gradient Effect -->
+            <LinearGradientBrush x:Key="TextGradient" StartPoint="0,0" EndPoint="1,0">
+                <GradientStop Color="#667eea" Offset="0"/>
+                <GradientStop Color="#764ba2" Offset="1"/>
+            </LinearGradientBrush>
+
+            <!-- Modern Button Style -->
+            <Style x:Key="ModernButton" TargetType="Button" BasedOn="{StaticResource MaterialDesignRaisedButton}">
+                <Setter Property="Background" Value="{StaticResource PrimaryGradient}"/>
+                <Setter Property="BorderBrush" Value="Transparent"/>
+                <Setter Property="Foreground" Value="White"/>
+                <Setter Property="FontWeight" Value="SemiBold"/>
+                <Setter Property="Padding" Value="20,12"/>
+                <Setter Property="Effect">
+                    <Setter.Value>
+                        <DropShadowEffect Color="#667eea" Opacity="0.4" BlurRadius="15" ShadowDepth="5"/>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
+            <!-- Modern Outlined Button -->
+            <Style x:Key="ModernOutlinedButton" TargetType="Button" BasedOn="{StaticResource MaterialDesignOutlinedButton}">
+                <Setter Property="BorderBrush" Value="{StaticResource PrimaryGradient}"/>
+                <Setter Property="Foreground" Value="#667eea"/>
+                <Setter Property="FontWeight" Value="SemiBold"/>
+                <Setter Property="Padding" Value="16,10"/>
+                <Setter Property="BorderThickness" Value="2"/>
+            </Style>
+
+            <!-- Card with Gradient Border -->
+            <Style x:Key="GradientCard" TargetType="materialDesign:Card">
+                <Setter Property="Effect">
+                    <Setter.Value>
+                        <DropShadowEffect Color="#667eea" Opacity="0.2" BlurRadius="20" ShadowDepth="0"/>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
+            <!-- Stat Card Style -->
+            <Style x:Key="StatCard" TargetType="Border">
+                <Setter Property="Background" Value="White"/>
+                <Setter Property="CornerRadius" Value="16"/>
+                <Setter Property="Padding" Value="24"/>
+                <Setter Property="Effect">
+                    <Setter.Value>
+                        <DropShadowEffect Color="Black" Opacity="0.1" BlurRadius="20" ShadowDepth="5"/>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+        </ResourceDictionary>
+    </Application.Resources>
+</Application>

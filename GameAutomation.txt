@@ -1,0 +1,19 @@
+GameAutomation/
+├── .NET 8 Solution
+│
+├── Core Layer (Business Logic)
+│   ├── Models          → Data structures
+│   ├── Services        → EmguCV, Input, Excel
+│   ├── Workflows       → Game automation flows
+│   └── Bot             → Orchestration
+│
+├── AI Layer (Extensions)
+│   ├── ML.NET          → Local image classification
+│   ├── OpenAI SDK      → GPT-4 Vision
+│   └── Anthropic SDK   → Claude Vision
+│
+└── UI Layer (Optional)
+    ├── WPF             → Modern Windows UI
+    └── Console         → CLI interface
+
+code cho tôi 1 template ví dụ (trước hết tất cả flow đều code c# chay đã, việc kéo thả để tính sau vì nó khá khó mô hình hóa), ảnh tôi để trong Asset/Other. Đầu tiên tìm icon search của window (Window_Search_Icon.png), di chuyển như người thật tới và ấn vào, chờ 0.5 giây thì nhập Excel như thật và ấn enter, chờ xuất hiện Excel_Init.png thì di chuyển như thật tới và ấn vào

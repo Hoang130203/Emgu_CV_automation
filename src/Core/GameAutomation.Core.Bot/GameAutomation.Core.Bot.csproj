@@ -1,0 +1,15 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\GameAutomation.Core.Models\GameAutomation.Core.Models.csproj" />
+    <ProjectReference Include="..\GameAutomation.Core.Services\GameAutomation.Core.Services.csproj" />
+    <ProjectReference Include="..\GameAutomation.Core.Workflows\GameAutomation.Core.Workflows.csproj" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+</Project>
