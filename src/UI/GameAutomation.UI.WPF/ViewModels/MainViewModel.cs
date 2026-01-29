@@ -1,9 +1,12 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using GameAutomation.Core.Models.Configuration;
+using GameAutomation.Core.Models.GameState;
 using GameAutomation.Core.Services.Input;
 using GameAutomation.Core.Services.Vision;
+using GameAutomation.Core.Workflows.Examples;
 using GameAutomation.UI.WPF;
+using GameAutomation.UI.WPF.Dialogs;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Drawing;
@@ -78,6 +81,7 @@ public partial class MainViewModel : ObservableObject
 
         // Add workflows - truyền reference để gọi command
         Workflows.Add(new WorkflowViewModel("Open Excel Flow", this));
+        Workflows.Add(new WorkflowViewModel("NTH Sign-in Flow", this));
         Workflows.Add(new WorkflowViewModel("Auto-Farm Workflow", this));
         Workflows.Add(new WorkflowViewModel("Combat Sequence", this));
 
@@ -208,6 +212,9 @@ public partial class MainViewModel : ObservableObject
         {
             case "Open Excel Flow":
                 await RunOpenExcelFlowAsync(workflow);
+                break;
+            case "NTH Sign-in Flow":
+                await RunNthSigninFlowAsync(workflow);
                 break;
             case "Auto-Farm Workflow":
                 AddLog($"[{workflow.Name}] Not implemented yet.");
@@ -434,6 +441,118 @@ public partial class MainViewModel : ObservableObject
             AddLog($"[Open Excel Flow] Error: {ex.Message}");
             workflow.Status = "Error";
         }
+    }
+
+    /// <summary>
+    /// Flow NTH Sign-in: Đăng nhập game với thông tin từ Excel
+    /// Hiển thị dialog để người dùng nhập sheet và dòng bắt đầu
+    /// </summary>
+    private async Task RunNthSigninFlowAsync(WorkflowViewModel workflow)
+    {
+        if (_botCancellationTokenSource == null || _botCancellationTokenSource.IsCancellationRequested)
+        {
+            AddLog("[NTH Sign-in] Bot not running.");
+            return;
+        }
+
+        // Show input dialog on UI thread
+        string? sheetName = null;
+        int startRow = 1;
+        bool dialogResult = false;
+
+        await Application.Current.Dispatcher.InvokeAsync(() =>
+        {
+            var dialog = new ExcelInputDialog
+            {
+                Owner = Application.Current.MainWindow
+            };
+
+            if (dialog.ShowDialog() == true)
+            {
+                sheetName = dialog.SheetName;
+                startRow = dialog.StartRow;
+                dialogResult = true;
+            }
+        });
+
+        if (!dialogResult)
+        {
+            AddLog("[NTH Sign-in] Cancelled by user.");
+            return;
+        }
+
+        // Minimize app to allow screen capture of game
+        Application.Current.Dispatcher.Invoke(() =>
+        {
+            Application.Current.MainWindow.WindowState = WindowState.Minimized;
+        });
+
+        // Wait a bit for window to minimize
+        await Task.Delay(500);
+
+        workflow.Status = "Running";
+        var token = _botCancellationTokenSource.Token;
+
+        try
+        {
+            AddLog($"[NTH Sign-in] Starting from row {startRow}" + (sheetName != null ? $", sheet: {sheetName}" : ""));
+
+            // Run workflow on background thread
+            await Task.Run(async () =>
+            {
+                var inputService = new InputService();
+                var nthWorkflow = new NthSigninWorkflow(
+                    _visionService,
+                    inputService,
+                    assetsPath: Path.Combine(_templatesFolder, "nth", "signin"),
+                    logger: msg => AddLog(msg));
+
+                var context = new GameContext { GameName = "NTH Game" };
+                var result = await nthWorkflow.ExecuteAsync(context, token, sheetName, startRow);
+
+                if (result.Success)
+                {
+                    AddLog($"[NTH Sign-in] Completed successfully!");
+                    UpdateWorkflowStatus(workflow, "Ready", incrementExecution: true);
+                }
+                else
+                {
+                    AddLog($"[NTH Sign-in] Failed: {result.Message}");
+                    UpdateWorkflowStatus(workflow, "Failed");
+                }
+
+                // Restore window after completion
+                RestoreMainWindow();
+            }, token);
+        }
+        catch (OperationCanceledException)
+        {
+            AddLog("[NTH Sign-in] Cancelled.");
+            workflow.Status = "Cancelled";
+            RestoreMainWindow();
+        }
+        catch (Exception ex)
+        {
+            AddLog($"[NTH Sign-in] Error: {ex.Message}");
+            workflow.Status = "Error";
+            RestoreMainWindow();
+        }
+    }
+
+    /// <summary>
+    /// Restore main window from minimized state
+    /// </summary>
+    private void RestoreMainWindow()
+    {
+        Application.Current?.Dispatcher.Invoke(() =>
+        {
+            var mainWindow = Application.Current.MainWindow;
+            if (mainWindow != null)
+            {
+                mainWindow.WindowState = WindowState.Normal;
+                mainWindow.Activate();
+            }
+        });
     }
 
     private async Task HandleExcelLicensePopupInternalAsync(CancellationToken token)
