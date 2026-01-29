@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.Input;
 using GameAutomation.Core.Models.Configuration;
 using GameAutomation.Core.Services.Input;
 using GameAutomation.Core.Services.Vision;
+using GameAutomation.UI.WPF;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Drawing;
@@ -21,6 +22,7 @@ public partial class MainViewModel : ObservableObject
     private readonly string _templatesFolder;
     private const int MaxScreenshots = 3;
     private CancellationTokenSource? _botCancellationTokenSource;
+    private readonly BotConfiguration _configuration;
 
     [ObservableProperty]
     private string _botStatus = "Stopped";
@@ -63,6 +65,7 @@ public partial class MainViewModel : ObservableObject
     public MainViewModel()
     {
         _visionService = new VisionService();
+        _configuration = new BotConfiguration();
 
         var baseDir = AppDomain.CurrentDomain.BaseDirectory;
         _screenshotsFolder = Path.Combine(baseDir, "Screenshots");
@@ -80,6 +83,45 @@ public partial class MainViewModel : ObservableObject
 
         AddLog("Bot initialized.");
         AddLog("Waiting for user input...");
+    }
+
+    [RelayCommand]
+    private void OpenSettings()
+    {
+        var settingsWindow = new SettingsWindow(_configuration)
+        {
+            Owner = Application.Current.MainWindow
+        };
+
+        if (settingsWindow.ShowDialog() == true)
+        {
+            AddLog("Settings saved successfully.");
+            // Apply settings to current session
+            ApplySettings();
+        }
+    }
+
+    private void ApplySettings()
+    {
+        // Update AI provider display
+        SelectedAIProvider = _configuration.AIProvider;
+        ApiKey = _configuration.AIApiKey ?? string.Empty;
+        GameWindowTitle = _configuration.GameWindowTitle;
+
+        // Apply feature matching settings to AutomationActions
+        ConfigureFeatureMatching(
+            _configuration.UseFeatureMatching,
+            _configuration.FeatureAlgorithm,
+            _configuration.MinMatchCount,
+            _configuration.FeatureMatchRatio);
+
+        AddLog($"Feature Matching: {(_configuration.UseFeatureMatching ? "Enabled" : "Disabled")}");
+        if (_configuration.UseFeatureMatching)
+        {
+            AddLog($"  Algorithm: {_configuration.FeatureAlgorithm}");
+            AddLog($"  Min Matches: {_configuration.MinMatchCount}");
+            AddLog($"  Ratio Threshold: {_configuration.FeatureMatchRatio:F2}");
+        }
     }
 
     [RelayCommand]
@@ -255,6 +297,7 @@ public partial class MainViewModel : ObservableObject
 
     /// <summary>
     /// Flow mẫu: Mở Excel - chạy trên background thread để không block UI
+    /// Step-by-step: Phải hoàn thành bước trước mới làm bước sau
     /// </summary>
     private async Task RunOpenExcelFlowAsync(WorkflowViewModel workflow)
     {
@@ -266,52 +309,10 @@ public partial class MainViewModel : ObservableObject
 
         workflow.Status = "Running";
         var token = _botCancellationTokenSource.Token;
+
+        // Template paths
+        var searchIconPath = Path.Combine(_templatesFolder, "template.png");  // Search icon
         var excelInitPath = Path.Combine(_templatesFolder, "Excel_Init.png");
-        // Test 1: Screen Capture
-        Console.WriteLine("[1] Testing Screen Capture...");
-        try
-        {
-            using var screenshot = CaptureScreen();
-            var screenshotPath = Path.Combine(Environment.CurrentDirectory, "screenshot.png");
-            screenshot.Save(screenshotPath, ImageFormat.Png);
-            Console.WriteLine($"    Screenshot saved: {screenshotPath}");
-            Console.WriteLine($"    Size: {screenshot.Width}x{screenshot.Height}");
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"    Error: {ex.Message}");
-        }
-
-        // Test 2: Template Matching + Human-like Click
-        Console.WriteLine("\n[2] Testing Find & Click (Human-like)...");
-        var templatePath = Path.Combine(_templatesFolder, "template.png");
-
-        if (File.Exists(templatePath))
-        {
-            try
-            {
-                // Sử dụng human-like movement: Bezier curve + ease-in-out
-                var result = await FindAndClickHumanAsync(templatePath, threshold: 0.8);
-
-                if (result != null)
-                {
-                    Console.WriteLine($"    Found and clicked at: ({result.X + result.Width / 2}, {result.Y + result.Height / 2})");
-                    Console.WriteLine($"    Confidence: {result.Confidence:P1}");
-                }
-                else
-                {
-                    Console.WriteLine("    Template not found.");
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"    Error: {ex.Message}");
-            }
-        }
-        else
-        {
-            Console.WriteLine($"    Skipped - Create '{templatePath}' to test.");
-        }
 
         try
         {
@@ -320,33 +321,83 @@ public partial class MainViewModel : ObservableObject
             // Chạy toàn bộ flow trên background thread
             await Task.Run(async () =>
             {
-                // Step 1: Wait a bit
-                AddLog("    Preparing...");
-                await ThinkAsync(300, 500);
-                IncrementAction();
+                // ============ STEP 1: Tìm và click Search Icon ============
+                AddLog("  [Step 1] Finding search icon...");
+                CaptureAndUpdatePreview();
+
+                if (!File.Exists(searchIconPath))
+                {
+                    AddLog($"    ERROR: Search icon template not found: {searchIconPath}");
+                    UpdateWorkflowStatus(workflow, "Failed");
+                    return;
+                }
+
+                // Dùng Multi-Scale để tìm icon ở nhiều kích thước
+                var searchResult = FindTemplateMultiScale(
+                    searchIconPath,
+                    threshold: 0.7,
+                    minScale: 0.5,
+                    maxScale: 1.5,
+                    scaleSteps: 10);
+
+                if (searchResult == null || searchResult.Count == 0)
+                {
+                    AddLog("    Search icon NOT FOUND. Trying with lower threshold...");
+
+                    //// Thử lại với threshold thấp hơn
+                    searchResult = FindTemplateMultiScale(
+                        searchIconPath,
+                        threshold: 0.6,
+                        minScale: 0.3,
+                        maxScale: 2.0,
+                        scaleSteps: 15);
+                }
+
+                if (searchResult == null || searchResult.Count == 0)
+                {
+                    AddLog("    ERROR: Search icon not found after retries.");
+                    AddLog($"    Make sure '{searchIconPath}' exists and matches the icon on screen.");
+                    UpdateWorkflowStatus(workflow, "Failed");
+                    return;
+                }
+
+                var bestMatch = searchResult[0];
+                AddLog($"    Found search icon! Confidence: {bestMatch.Confidence:P1} at ({bestMatch.X}, {bestMatch.Y})");
+                IncrementDetection();
 
                 if (token.IsCancellationRequested) return;
 
-                // Step 2: Type "Excel"
-                AddLog("    Typing 'Excel'...");
+                // Click vào search icon
+                AddLog("    Clicking search icon...");
+                int centerX = bestMatch.X + bestMatch.Width / 2;
+                int centerY = bestMatch.Y + bestMatch.Height / 2;
+                await ClickAtHumanAsync(centerX, centerY);
+                IncrementAction();
+
+                // Chờ một chút để search box mở
+                await ThinkAsync(500, 800);
+
+                if (token.IsCancellationRequested) return;
+
+                // ============ STEP 2: Gõ "Excel" ============
+                AddLog("  [Step 2] Typing 'Excel'...");
                 await TypeHumanAsync("Excel");
                 IncrementAction();
 
                 if (token.IsCancellationRequested) return;
 
-                // Step 3: Wait and press Enter
-                await ThinkAsync(200, 400);
-                AddLog("    Pressing Enter...");
+                // ============ STEP 3: Nhấn Enter ============
+                await ThinkAsync(300, 500);
+                AddLog("  [Step 3] Pressing Enter...");
                 Input.KeyPress(VirtualKeyCode.RETURN);
                 IncrementAction();
 
                 if (token.IsCancellationRequested) return;
 
-                // Step 4: Wait for Excel to appear
-                AddLog("    Waiting for Excel to open (max 15s)...");
+                // ============ STEP 4: Chờ Excel xuất hiện ============
+                AddLog("  [Step 4] Waiting for Excel to open (max 15s)...");
                 var excelResult = WaitForTemplate(excelInitPath, threshold: 0.7, timeoutMs: 15000, checkIntervalMs: 500);
 
-                // Capture và update preview
                 CaptureAndUpdatePreview();
                 IncrementDetection();
 
@@ -354,12 +405,12 @@ public partial class MainViewModel : ObservableObject
                 {
                     AddLog($"    Excel found! Confidence: {excelResult.Confidence:P1}");
 
-                    // Step 5: Click on Excel
-                    AddLog("    Clicking on Excel...");
+                    // ============ STEP 5: Click vào Excel ============
+                    AddLog("  [Step 5] Clicking on Excel...");
                     await FindAndClickHumanAsync(excelInitPath, threshold: 0.7);
                     IncrementAction();
 
-                    AddLog("[Open Excel Flow] Completed!");
+                    AddLog("[Open Excel Flow] Completed successfully!");
                     UpdateWorkflowStatus(workflow, "Ready", incrementExecution: true);
 
                     // Handle License Popup

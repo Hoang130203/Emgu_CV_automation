@@ -1,4 +1,5 @@
 using System.Drawing;
+using GameAutomation.Core.Models.Configuration;
 using GameAutomation.Core.Models.Vision;
 using GameAutomation.Core.Services.Input;
 using GameAutomation.Core.Services.Vision;
@@ -16,9 +17,41 @@ public static class AutomationActions
     private static readonly Lazy<InputService> _inputService = new(() => new InputService());
     private static readonly Lazy<HumanLikeSimulator> _humanSimulator = new(() => new HumanLikeSimulator(_inputService.Value));
 
+    // Feature Matching Configuration
+    private static bool _useFeatureMatching = false;
+    private static FeatureMatchingAlgorithm _featureAlgorithm = FeatureMatchingAlgorithm.ORB;
+    private static int _minMatchCount = 10;
+    private static double _featureMatchRatio = 0.75;
+
     public static IVisionService Vision => _visionService.Value;
     public static IInputService Input => _inputService.Value;
     public static HumanLikeSimulator Human => _humanSimulator.Value;
+
+    /// <summary>
+    /// Configure feature matching settings
+    /// </summary>
+    public static void ConfigureFeatureMatching(
+        bool useFeatureMatching,
+        FeatureMatchingAlgorithm algorithm = FeatureMatchingAlgorithm.ORB,
+        int minMatchCount = 10,
+        double ratioThreshold = 0.75)
+    {
+        _useFeatureMatching = useFeatureMatching;
+        _featureAlgorithm = algorithm;
+        _minMatchCount = minMatchCount;
+        _featureMatchRatio = ratioThreshold;
+    }
+
+    /// <summary>
+    /// Apply settings from BotConfiguration
+    /// </summary>
+    public static void ApplyConfiguration(BotConfiguration config)
+    {
+        _useFeatureMatching = config.UseFeatureMatching;
+        _featureAlgorithm = config.FeatureAlgorithm;
+        _minMatchCount = config.MinMatchCount;
+        _featureMatchRatio = config.FeatureMatchRatio;
+    }
 
     /// <summary>
     /// Capture current screen
@@ -29,12 +62,104 @@ public static class AutomationActions
     }
 
     /// <summary>
-    /// Find template on screen
+    /// Find template on screen (uses Feature Matching if configured)
     /// </summary>
     public static List<DetectionResult> FindTemplate(string templatePath, double threshold = 0.8)
     {
         using var screenshot = CaptureScreen();
-        return _visionService.Value.FindTemplate(screenshot, templatePath, threshold);
+        return _visionService.Value.FindTemplateAuto(
+            screenshot,
+            templatePath,
+            _useFeatureMatching,
+            threshold,
+            _featureAlgorithm,
+            _minMatchCount,
+            _featureMatchRatio);
+    }
+
+    /// <summary>
+    /// Find template using Feature Matching (ORB/SIFT) - explicitly
+    /// </summary>
+    public static List<DetectionResult> FindTemplateWithFeatures(
+        string templatePath,
+        FeatureMatchingAlgorithm algorithm = FeatureMatchingAlgorithm.ORB,
+        int minMatchCount = 10,
+        double ratioThreshold = 0.75)
+    {
+        using var screenshot = CaptureScreen();
+        return _visionService.Value.FindTemplateWithFeatures(
+            screenshot,
+            templatePath,
+            algorithm,
+            minMatchCount,
+            ratioThreshold);
+    }
+
+    /// <summary>
+    /// Find template using Multi-Scale matching - best for icons at different sizes
+    /// </summary>
+    /// <param name="templatePath">Path to template image</param>
+    /// <param name="threshold">Match threshold (default 0.7, lower = more matches)</param>
+    /// <param name="minScale">Minimum scale to try (0.5 = 50% of original)</param>
+    /// <param name="maxScale">Maximum scale to try (2.0 = 200% of original)</param>
+    /// <param name="scaleSteps">Number of different scales to try</param>
+    public static List<DetectionResult> FindTemplateMultiScale(
+        string templatePath,
+        double threshold = 0.7,
+        double minScale = 0.5,
+        double maxScale = 2.0,
+        int scaleSteps = 10)
+    {
+        using var screenshot = CaptureScreen();
+        return _visionService.Value.FindTemplateMultiScale(
+            screenshot,
+            templatePath,
+            threshold,
+            minScale,
+            maxScale,
+            scaleSteps);
+    }
+
+    /// <summary>
+    /// Find and click using Multi-Scale matching
+    /// </summary>
+    public static DetectionResult? FindAndClickMultiScale(
+        string templatePath,
+        double threshold = 0.7,
+        double minScale = 0.5,
+        double maxScale = 2.0,
+        int delayBeforeClick = 100)
+    {
+        var results = FindTemplateMultiScale(templatePath, threshold, minScale, maxScale);
+        if (results.Count == 0)
+            return null;
+
+        var best = results[0];
+        ClickAt(best.X + best.Width / 2, best.Y + best.Height / 2, delayBeforeClick);
+        return best;
+    }
+
+    /// <summary>
+    /// Find and click using Multi-Scale matching with human-like movement
+    /// </summary>
+    public static async Task<DetectionResult?> FindAndClickMultiScaleHumanAsync(
+        string templatePath,
+        double threshold = 0.7,
+        double minScale = 0.5,
+        double maxScale = 2.0)
+    {
+        var results = FindTemplateMultiScale(templatePath, threshold, minScale, maxScale);
+        if (results.Count == 0)
+            return null;
+
+        var best = results[0];
+        int centerX = best.X + best.Width / 2;
+        int centerY = best.Y + best.Height / 2;
+
+        await _humanSimulator.Value.MoveMouseAsync(centerX, centerY);
+        await _humanSimulator.Value.LeftClickAsync();
+
+        return best;
     }
 
     /// <summary>

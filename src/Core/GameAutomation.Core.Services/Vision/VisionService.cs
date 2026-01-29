@@ -3,7 +3,10 @@ using System.Drawing.Imaging;
 using System.Runtime.InteropServices;
 using Emgu.CV;
 using Emgu.CV.CvEnum;
+using Emgu.CV.Features2D;
 using Emgu.CV.Structure;
+using Emgu.CV.Util;
+using GameAutomation.Core.Models.Configuration;
 using GameAutomation.Core.Models.Vision;
 
 namespace GameAutomation.Core.Services.Vision;
@@ -395,6 +398,305 @@ public class VisionService : IVisionService
             if (converted)
                 image24.Dispose();
         }
+    }
+
+    #endregion
+
+    #region Multi-Scale Template Matching
+
+    public List<DetectionResult> FindTemplateMultiScale(
+        Bitmap screenshot,
+        string templatePath,
+        double threshold = 0.7,
+        double minScale = 0.5,
+        double maxScale = 2.0,
+        int scaleSteps = 10)
+    {
+        if (!File.Exists(templatePath))
+            throw new FileNotFoundException($"Template file not found: {templatePath}");
+
+        using var templateBitmap = new Bitmap(templatePath);
+        return FindTemplateMultiScaleInternal(screenshot, templateBitmap, threshold, minScale, maxScale, scaleSteps);
+    }
+
+    private List<DetectionResult> FindTemplateMultiScaleInternal(
+        Bitmap screenshot,
+        Bitmap template,
+        double threshold,
+        double minScale,
+        double maxScale,
+        int scaleSteps)
+    {
+        var allResults = new List<DetectionResult>();
+
+        // Convert screenshot to 24bpp once
+        bool screenshotConverted = screenshot.PixelFormat != PixelFormat.Format24bppRgb;
+        Bitmap screenshot24 = screenshotConverted ? ConvertTo24bpp(screenshot) : screenshot;
+
+        try
+        {
+            using var sourceImage = BitmapToImage(screenshot24);
+
+            // Calculate scale factors to try
+            double scaleStep = (maxScale - minScale) / Math.Max(1, scaleSteps - 1);
+
+            for (int i = 0; i < scaleSteps; i++)
+            {
+                double scale = minScale + (i * scaleStep);
+
+                // Calculate new template size
+                int newWidth = (int)(template.Width * scale);
+                int newHeight = (int)(template.Height * scale);
+
+                // Skip if template would be too small or larger than screenshot
+                if (newWidth < 10 || newHeight < 10 ||
+                    newWidth >= screenshot.Width || newHeight >= screenshot.Height)
+                    continue;
+
+                // Resize template
+                using var resizedTemplate = new Bitmap(template, newWidth, newHeight);
+                bool templateConverted = resizedTemplate.PixelFormat != PixelFormat.Format24bppRgb;
+                Bitmap template24 = templateConverted ? ConvertTo24bpp(resizedTemplate) : resizedTemplate;
+
+                try
+                {
+                    using var templateImage = BitmapToImage(template24);
+                    using var result = sourceImage.MatchTemplate(templateImage, TemplateMatchingType.CcoeffNormed);
+
+                    double[] minValues, maxValues;
+                    Point[] minLocations, maxLocations;
+                    result.MinMax(out minValues, out maxValues, out minLocations, out maxLocations);
+
+                    if (maxValues[0] >= threshold)
+                    {
+                        allResults.Add(new DetectionResult
+                        {
+                            Found = true,
+                            Confidence = maxValues[0],
+                            X = maxLocations[0].X,
+                            Y = maxLocations[0].Y,
+                            Width = newWidth,
+                            Height = newHeight,
+                            DetectedAt = DateTime.UtcNow
+                        });
+                    }
+                }
+                finally
+                {
+                    if (templateConverted)
+                        template24.Dispose();
+                }
+            }
+        }
+        finally
+        {
+            if (screenshotConverted)
+                screenshot24.Dispose();
+        }
+
+        // Return best matches sorted by confidence
+        return allResults.OrderByDescending(r => r.Confidence).ToList();
+    }
+
+    #endregion
+
+    #region Feature Matching Methods
+
+    public List<DetectionResult> FindTemplateWithFeatures(
+        Bitmap screenshot,
+        string templatePath,
+        FeatureMatchingAlgorithm algorithm = FeatureMatchingAlgorithm.ORB,
+        int minMatchCount = 10,
+        double ratioThreshold = 0.75)
+    {
+        if (!File.Exists(templatePath))
+            throw new FileNotFoundException($"Template file not found: {templatePath}");
+
+        using var templateBitmap = new Bitmap(templatePath);
+        return FindTemplateWithFeaturesInternal(screenshot, templateBitmap, algorithm, minMatchCount, ratioThreshold);
+    }
+
+    public List<DetectionResult> FindTemplateAuto(
+        Bitmap screenshot,
+        string templatePath,
+        bool useFeatureMatching = false,
+        double threshold = 0.8,
+        FeatureMatchingAlgorithm algorithm = FeatureMatchingAlgorithm.ORB,
+        int minMatchCount = 10,
+        double ratioThreshold = 0.75)
+    {
+        if (useFeatureMatching)
+        {
+            return FindTemplateWithFeatures(screenshot, templatePath, algorithm, minMatchCount, ratioThreshold);
+        }
+        else
+        {
+            return FindTemplate(screenshot, templatePath, threshold);
+        }
+    }
+
+    private List<DetectionResult> FindTemplateWithFeaturesInternal(
+        Bitmap screenshot,
+        Bitmap template,
+        FeatureMatchingAlgorithm algorithm,
+        int minMatchCount,
+        double ratioThreshold)
+    {
+        var results = new List<DetectionResult>();
+
+        // Convert to 24bpp RGB if needed
+        bool screenshotConverted = screenshot.PixelFormat != PixelFormat.Format24bppRgb;
+        bool templateConverted = template.PixelFormat != PixelFormat.Format24bppRgb;
+
+        Bitmap screenshot24 = screenshotConverted ? ConvertTo24bpp(screenshot) : screenshot;
+        Bitmap template24 = templateConverted ? ConvertTo24bpp(template) : template;
+
+        try
+        {
+            using var sourceImage = BitmapToImage(screenshot24);
+            using var templateImage = BitmapToImage(template24);
+
+            // Convert to grayscale for feature detection
+            using var sourceGray = sourceImage.Convert<Gray, byte>();
+            using var templateGray = templateImage.Convert<Gray, byte>();
+
+            // Create feature detector based on algorithm
+            Feature2D detector = algorithm switch
+            {
+                FeatureMatchingAlgorithm.SIFT => new SIFT(),
+                FeatureMatchingAlgorithm.ORB => new ORB(),
+                _ => new ORB()
+            };
+
+            using (detector)
+            {
+                // Detect keypoints and compute descriptors
+                using var templateKeypoints = new VectorOfKeyPoint();
+                using var sourceKeypoints = new VectorOfKeyPoint();
+                using var templateDescriptors = new Mat();
+                using var sourceDescriptors = new Mat();
+
+                detector.DetectAndCompute(templateGray, null, templateKeypoints, templateDescriptors, false);
+                detector.DetectAndCompute(sourceGray, null, sourceKeypoints, sourceDescriptors, false);
+
+                // Check if we have enough keypoints
+                if (templateKeypoints.Size < 4 || sourceKeypoints.Size < 4)
+                {
+                    return results;
+                }
+
+                // Match descriptors using BFMatcher with KNN
+                using var matcher = new BFMatcher(
+                    algorithm == FeatureMatchingAlgorithm.SIFT ? DistanceType.L2 : DistanceType.Hamming);
+
+                using var matches = new VectorOfVectorOfDMatch();
+                matcher.KnnMatch(templateDescriptors, sourceDescriptors, matches, 2);
+
+                // Apply Lowe's ratio test
+                var goodMatches = new List<MDMatch>();
+                for (int i = 0; i < matches.Size; i++)
+                {
+                    if (matches[i].Size >= 2)
+                    {
+                        var m = matches[i][0];
+                        var n = matches[i][1];
+                        if (m.Distance < ratioThreshold * n.Distance)
+                        {
+                            goodMatches.Add(m);
+                        }
+                    }
+                }
+
+                // Check if we have enough good matches
+                if (goodMatches.Count >= minMatchCount)
+                {
+                    // Get matched keypoint coordinates
+                    var srcPoints = new PointF[goodMatches.Count];
+                    var dstPoints = new PointF[goodMatches.Count];
+
+                    for (int i = 0; i < goodMatches.Count; i++)
+                    {
+                        srcPoints[i] = templateKeypoints[goodMatches[i].QueryIdx].Point;
+                        dstPoints[i] = sourceKeypoints[goodMatches[i].TrainIdx].Point;
+                    }
+
+                    // Find homography
+                    using var srcMat = new Mat(goodMatches.Count, 1, DepthType.Cv32F, 2);
+                    using var dstMat = new Mat(goodMatches.Count, 1, DepthType.Cv32F, 2);
+
+                    srcMat.SetTo(srcPoints);
+                    dstMat.SetTo(dstPoints);
+
+                    using var homography = CvInvoke.FindHomography(srcMat, dstMat, RobustEstimationAlgorithm.Ransac, 5.0);
+
+                    if (!homography.IsEmpty)
+                    {
+                        // Transform template corners to find bounding box in source
+                        var templateCorners = new PointF[]
+                        {
+                            new PointF(0, 0),
+                            new PointF(template.Width, 0),
+                            new PointF(template.Width, template.Height),
+                            new PointF(0, template.Height)
+                        };
+
+                        // Use VectorOfPointF for perspective transform
+                        using var srcCorners = new VectorOfPointF(templateCorners);
+                        using var dstCorners = new VectorOfPointF();
+                        CvInvoke.PerspectiveTransform(srcCorners, dstCorners, homography);
+
+                        var corners = dstCorners.ToArray();
+
+                        // Calculate bounding box
+                        float minX = float.MaxValue, minY = float.MaxValue;
+                        float maxX = float.MinValue, maxY = float.MinValue;
+
+                        foreach (var corner in corners)
+                        {
+                            minX = Math.Min(minX, corner.X);
+                            minY = Math.Min(minY, corner.Y);
+                            maxX = Math.Max(maxX, corner.X);
+                            maxY = Math.Max(maxY, corner.Y);
+                        }
+
+                        // Validate bounding box
+                        int x = (int)Math.Max(0, minX);
+                        int y = (int)Math.Max(0, minY);
+                        int width = (int)(maxX - minX);
+                        int height = (int)(maxY - minY);
+
+                        if (width > 0 && height > 0 &&
+                            x + width <= screenshot.Width &&
+                            y + height <= screenshot.Height)
+                        {
+                            // Calculate confidence based on match quality
+                            double confidence = (double)goodMatches.Count / Math.Max(templateKeypoints.Size, 1);
+                            confidence = Math.Min(1.0, confidence);
+
+                            results.Add(new DetectionResult
+                            {
+                                Found = true,
+                                Confidence = confidence,
+                                X = x,
+                                Y = y,
+                                Width = width,
+                                Height = height,
+                                DetectedAt = DateTime.UtcNow
+                            });
+                        }
+                    }
+                }
+            }
+        }
+        finally
+        {
+            if (screenshotConverted)
+                screenshot24.Dispose();
+            if (templateConverted)
+                template24.Dispose();
+        }
+
+        return results.OrderByDescending(r => r.Confidence).ToList();
     }
 
     #endregion

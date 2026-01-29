@@ -1,3 +1,4 @@
+using GameAutomation.Core.Models.Configuration;
 using GameAutomation.Core.Models.Vision;
 using System.Drawing;
 
@@ -62,4 +63,62 @@ public interface IVisionService
     /// Find all occurrences of a specific color in image
     /// </summary>
     List<Point> FindColorPositions(Bitmap image, Color targetColor, int tolerance = 10);
+
+    // === Feature Matching Methods ===
+
+    /// <summary>
+    /// Find template using feature matching (ORB/SIFT)
+    /// Better for different scales, rotations, or color variations
+    /// </summary>
+    /// <param name="screenshot">Screenshot bitmap</param>
+    /// <param name="templatePath">Path to template image file</param>
+    /// <param name="algorithm">Feature matching algorithm (ORB or SIFT)</param>
+    /// <param name="minMatchCount">Minimum number of good matches required</param>
+    /// <param name="ratioThreshold">Lowe's ratio test threshold (0.0 to 1.0)</param>
+    /// <returns>List of detection results</returns>
+    List<DetectionResult> FindTemplateWithFeatures(
+        Bitmap screenshot,
+        string templatePath,
+        FeatureMatchingAlgorithm algorithm = FeatureMatchingAlgorithm.ORB,
+        int minMatchCount = 10,
+        double ratioThreshold = 0.75);
+
+    /// <summary>
+    /// Unified template finding method - automatically chooses strategy
+    /// </summary>
+    /// <param name="screenshot">Screenshot bitmap</param>
+    /// <param name="templatePath">Path to template image file</param>
+    /// <param name="useFeatureMatching">Use feature matching instead of template matching</param>
+    /// <param name="threshold">Match threshold for template matching (0.0 to 1.0)</param>
+    /// <param name="algorithm">Feature matching algorithm if useFeatureMatching is true</param>
+    /// <param name="minMatchCount">Min matches for feature matching</param>
+    /// <param name="ratioThreshold">Lowe's ratio for feature matching</param>
+    /// <returns>List of detection results</returns>
+    List<DetectionResult> FindTemplateAuto(
+        Bitmap screenshot,
+        string templatePath,
+        bool useFeatureMatching = false,
+        double threshold = 0.8,
+        FeatureMatchingAlgorithm algorithm = FeatureMatchingAlgorithm.ORB,
+        int minMatchCount = 10,
+        double ratioThreshold = 0.75);
+
+    /// <summary>
+    /// Find template using multi-scale matching (searches at different sizes)
+    /// Best for icons that may appear at different scales on different machines
+    /// </summary>
+    /// <param name="screenshot">Screenshot bitmap</param>
+    /// <param name="templatePath">Path to template image file</param>
+    /// <param name="threshold">Match threshold (0.0 to 1.0)</param>
+    /// <param name="minScale">Minimum scale factor (e.g., 0.5 = 50%)</param>
+    /// <param name="maxScale">Maximum scale factor (e.g., 2.0 = 200%)</param>
+    /// <param name="scaleSteps">Number of scale steps to try</param>
+    /// <returns>List of detection results with best match across all scales</returns>
+    List<DetectionResult> FindTemplateMultiScale(
+        Bitmap screenshot,
+        string templatePath,
+        double threshold = 0.7,
+        double minScale = 0.5,
+        double maxScale = 2.0,
+        int scaleSteps = 10);
 }

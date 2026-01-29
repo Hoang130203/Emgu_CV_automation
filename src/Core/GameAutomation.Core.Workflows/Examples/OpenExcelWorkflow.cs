@@ -55,7 +55,8 @@ namespace GameAutomation.Core.Workflows.Examples
                 // Bước 1: Tìm Windows Search Icon
                 Console.WriteLine("[OpenExcel] Bước 1: Tìm Windows Search Icon...");
                 var searchIconPath = Path.Combine(_assetsPath, WindowSearchIconTemplate);
-                var searchIconResult = await FindTemplateWithRetryAsync(searchIconPath, maxRetries: 3, cancellationToken);
+                var searchIconResult = await WaitForTemplateAsync(searchIconPath, timeoutSeconds: 15,
+                    pollIntervalMs: 500, cancellationToken);
 
                 if (searchIconResult == null)
                 {

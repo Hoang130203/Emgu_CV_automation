@@ -17,3 +17,4 @@ GameAutomation/
     └── Console         → CLI interface
 
 code cho tôi 1 template ví dụ (trước hết tất cả flow đều code c# chay đã, việc kéo thả để tính sau vì nó khá khó mô hình hóa), ảnh tôi để trong Asset/Other. Đầu tiên tìm icon search của window (Window_Search_Icon.png), di chuyển như người thật tới và ấn vào, chờ 0.5 giây thì nhập Excel như thật và ấn enter, chờ xuất hiện Excel_Init.png thì di chuyển như thật tới và ấn vào
+code cho tôi trang setting với giao diện cũng đẹp như hiện tại, trước mắt tôi chỉ đang muốn cài đặt chế độ có muốn nhận diện ảnh bằng cách convert sang Feature Matching (SIFT/ORB) hay không. tiếp tới là hoàn thành tính năng đó bằng cách refact lại code cho clean và thêm chức năng đó, mục tiêu là giúp nhận dạng được ảnh tốt/khá tốt kể cả trong trường hợp từng máy có màu sắc và kích thước k hoàn toàn giống nhau -> chỉ nhận diện hình dạng và chọn ảnh giống nhất trong vùng kiểm tra
