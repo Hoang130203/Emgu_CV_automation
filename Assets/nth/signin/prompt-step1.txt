@@ -1,0 +1,17 @@
+ok giờ hãy code tiếp cho tôi 1 template mới để cày game với flow như sau (mặc định là việc di chuyển chuột, nhập text là giống như người thật và mỗi lần nhập text xong thì đều nên chờ khoảng 2 giây mới làm hành động tiếp, việc ấn ảnh thì mặc định là click chính giữa ảnh, và sử dụng chiến lược find multi-scale cho mọi ảnh, chọn ảnh giống nhất và sát kích thước nhất):
+
+
+Khi ấn play flow thì hiển thị 1 popup cho phép người dùng nhập vào sheet, dòng bắt đầu đầu tiên để bắt đầu đọc file excel
+
+bước 1: đăng nhập (asset ở thư mục Templates/nth/signin
+ + Đọc file excel có tên Nick phụ nth.xlsx trong thư mục hoặc file excel duy nhất trong thư mục với sheet và dòng được đưa vào từ người dùng (tăng dần 1 dòng qua mỗi vòng lặp) với username là cột 1, password là cột 2 của dòng
+ + Tìm ảnh 01_usernamebox (chờ ảnh tối đa 5s) và di chuyển chuột tới, ấn vào ảnh
+ + Nhập username, chờ 2s
+ + Ấn tab, chờ 1s
+ + Nhập password, chờ 2s
+ + Chờ ảnh 03_loginbutton và di chuyển chuột tới, ấn vào ảnh
+ + Chờ ảnh 04_checkbox tối đa 5s nếu xuất hiện thì (di chuyển chuột tới ấn vào sau đó delay 1s, chờ ảnh 05_agree xuất hiện và click vào và xuống bước tiếp) nếu 04_checkbox không xuất hiện thì xuống bước tiếp
+ + Tìm ảnh 06_startbutton và di chuyển chuột tới click vào
+ + Đợi ảnh 07_backbutton xuất hiện thì tìm ảnh 08_startbutton2 và di chuyển chuột tới click vào
+
+Trước hết chỉ cần như này đã, các bước còn lại tôi sẽ nói sau
