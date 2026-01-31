@@ -84,6 +84,8 @@ public partial class MainViewModel : ObservableObject
         Workflows.Add(new WorkflowViewModel("NTH Sign-in Flow", this));
         Workflows.Add(new WorkflowViewModel("NTH Lv26-44 Camera", this));
         Workflows.Add(new WorkflowViewModel("NTH Lv26-44 MHL", this));
+        Workflows.Add(new WorkflowViewModel("NTH Lv26-44 Combat", this));
+        Workflows.Add(new WorkflowViewModel("NTH Lv26-44 Map", this));
         Workflows.Add(new WorkflowViewModel("Auto-Farm Workflow", this));
         Workflows.Add(new WorkflowViewModel("Combat Sequence", this));
 
@@ -223,6 +225,12 @@ public partial class MainViewModel : ObservableObject
                 break;
             case "NTH Lv26-44 MHL":
                 await RunNthMongHoaLucFlowAsync(workflow);
+                break;
+            case "NTH Lv26-44 Combat":
+                await RunNthSettingCombatFlowAsync(workflow);
+                break;
+            case "NTH Lv26-44 Map":
+                await RunNthMapFlowAsync(workflow);
                 break;
             case "Auto-Farm Workflow":
                 AddLog($"[{workflow.Name}] Not implemented yet.");
@@ -681,6 +689,146 @@ public partial class MainViewModel : ObservableObject
         catch (Exception ex)
         {
             AddLog($"[NTH MHL] Error: {ex.Message}");
+            workflow.Status = "Error";
+            RestoreMainWindow();
+        }
+    }
+
+    /// <summary>
+    /// Flow NTH Setting Combat: Quy trình bước 4 cho game từ level 26-44
+    /// Cài đặt tự động đánh: Press B -> Setup auto medicine -> Configure combat
+    /// </summary>
+    private async Task RunNthSettingCombatFlowAsync(WorkflowViewModel workflow)
+    {
+        if (_botCancellationTokenSource == null || _botCancellationTokenSource.IsCancellationRequested)
+        {
+            AddLog("[NTH Combat] Bot not running.");
+            return;
+        }
+
+        // Minimize app to allow screen capture of game
+        Application.Current.Dispatcher.Invoke(() =>
+        {
+            Application.Current.MainWindow.WindowState = WindowState.Minimized;
+        });
+
+        // Wait a bit for window to minimize
+        await Task.Delay(500);
+
+        workflow.Status = "Running";
+        var token = _botCancellationTokenSource.Token;
+
+        try
+        {
+            AddLog("[NTH Combat] Starting Step 4: Setting Combat workflow...");
+
+            // Run workflow on background thread
+            await Task.Run(async () =>
+            {
+                var inputService = new InputService();
+                var combatWorkflow = new NthLv26To44SettingCombatWorkflow(
+                    _visionService,
+                    inputService,
+                    assetsPath: Path.Combine(_templatesFolder, "nth", "ingame_settingcombat"),
+                    logger: msg => AddLog(msg));
+
+                var context = new GameContext { GameName = "NTH Game" };
+                var result = await combatWorkflow.ExecuteAsync(context, token);
+
+                if (result.Success)
+                {
+                    AddLog($"[NTH Combat] Completed successfully!");
+                    UpdateWorkflowStatus(workflow, "Ready", incrementExecution: true);
+                }
+                else
+                {
+                    AddLog($"[NTH Combat] Failed: {result.Message}");
+                    UpdateWorkflowStatus(workflow, "Failed");
+                }
+
+                // Restore window after completion
+                RestoreMainWindow();
+            }, token);
+        }
+        catch (OperationCanceledException)
+        {
+            AddLog("[NTH Combat] Cancelled.");
+            workflow.Status = "Cancelled";
+            RestoreMainWindow();
+        }
+        catch (Exception ex)
+        {
+            AddLog($"[NTH Combat] Error: {ex.Message}");
+            workflow.Status = "Error";
+            RestoreMainWindow();
+        }
+    }
+
+    /// <summary>
+    /// Flow NTH Map: Quy trình bước 5 cho game từ level 26-44
+    /// Tìm đường tới rương báu: Open map -> Zoom -> Navigate -> Find chest
+    /// </summary>
+    private async Task RunNthMapFlowAsync(WorkflowViewModel workflow)
+    {
+        if (_botCancellationTokenSource == null || _botCancellationTokenSource.IsCancellationRequested)
+        {
+            AddLog("[NTH Map] Bot not running.");
+            return;
+        }
+
+        // Minimize app to allow screen capture of game
+        Application.Current.Dispatcher.Invoke(() =>
+        {
+            Application.Current.MainWindow.WindowState = WindowState.Minimized;
+        });
+
+        // Wait a bit for window to minimize
+        await Task.Delay(500);
+
+        workflow.Status = "Running";
+        var token = _botCancellationTokenSource.Token;
+
+        try
+        {
+            AddLog("[NTH Map] Starting Step 5: Map Navigation workflow...");
+
+            // Run workflow on background thread
+            await Task.Run(async () =>
+            {
+                var inputService = new InputService();
+                var mapWorkflow = new NthLv26To44MapWorkflow(
+                    _visionService,
+                    inputService,
+                    assetsPath: Path.Combine(_templatesFolder, "nth", "ingame_map"),
+                    logger: msg => AddLog(msg));
+
+                var context = new GameContext { GameName = "NTH Game" };
+                var result = await mapWorkflow.ExecuteAsync(context, token);
+
+                if (result.Success)
+                {
+                    AddLog($"[NTH Map] Completed: {result.Message}");
+                    UpdateWorkflowStatus(workflow, "Ready", incrementExecution: true);
+                }
+                else
+                {
+                    AddLog($"[NTH Map] Failed: {result.Message}");
+                    UpdateWorkflowStatus(workflow, "Failed");
+                }
+
+                // Restore window after completion
+                RestoreMainWindow();
+            }, token);
+        }
+        catch (OperationCanceledException)
+        {
+            AddLog("[NTH Map] Cancelled.");
+            workflow.Status = "Cancelled";
+            RestoreMainWindow();
+        }
+        catch (Exception ex)
+        {
+            AddLog($"[NTH Map] Error: {ex.Message}");
             workflow.Status = "Error";
             RestoreMainWindow();
         }
