@@ -26,10 +26,16 @@ public class NthLv26To44CameraWorkflow : IWorkflow
 
     // Template file names for camera flow
     private const string SkipTaleButtonTemplate = "00_skiptalebutton.png";
+    private const string SkipTaleButton2Template = "00_skiptalebutton2.png";
+    private const string SkipTaleButton3Template = "00_skiptalebutton3.png";
+    private const string SkipTaleButton4Template = "00_skiptalebutton4.png";
+    private const string SkipTaleButton5Template = "00_skiptalebutton5.png";
+
     private const string MenuButtonTemplate = "01_menubutton.png";
     private const string CameraButtonTemplate = "02_camerabutton.png";
     private const string CameraEnterButtonTemplate = "03_camera_enterbutton.png";
     private const string CameraSkipButtonTemplate = "04_camera_skipbutton.png";
+    private const string CameraSkipButton2Template = "04_camera_skipbutton2.png";
     private const string CameraCloseImageTemplate = "05_camera_closeimage.png";
     private const string CameraBackButtonTemplate = "06_camera_backbutton.png";
 
@@ -40,10 +46,10 @@ public class NthLv26To44CameraWorkflow : IWorkflow
     private const int ScaleSteps = 15;
 
     // Delays
-    private const int AfterTypeDelayMs = 2000;  // Chờ 2s sau khi nhập text
-    private const int ShortDelayMs = 500;       // Chờ ngắn 0.5s
-    private const int MediumDelayMs = 1000;     // Chờ vừa 1s
-    private const int LongDelayMs = 2000;       // Chờ dài 2s
+    private const int AfterTypeDelayMs = 1000;  // Chờ 2s sau khi nhập text
+    private const int ShortDelayMs = 200;       // Chờ ngắn 0.5s
+    private const int MediumDelayMs = 500;     // Chờ vừa 1s
+    private const int LongDelayMs = 1000;       // Chờ dài 2s
 
     public string Name => "NTH Lv26-44 Camera Flow";
     public string Description => "Quy trình camera cho game NTH từ level 26 đến 44";
@@ -153,7 +159,13 @@ public class NthLv26To44CameraWorkflow : IWorkflow
                     CameraSkipButtonTemplate,
                     timeoutMs: LongDelayMs,
                     cancellationToken);
-
+                if (skipButton2 == null)
+                {
+                    skipButton2 = await FindMultiScaleAsync(
+                    CameraSkipButton2Template,
+                    timeoutMs: LongDelayMs,
+                    cancellationToken);
+                }
                 if (skipButton2 != null)
                 {
                     Log("[NTH Camera] Skip button found, clicking and pressing Space...");
@@ -248,8 +260,8 @@ public class NthLv26To44CameraWorkflow : IWorkflow
     /// </summary>
     private async Task HandleSkipTaleButtonAsync(CancellationToken cancellationToken)
     {
-        // Chờ 5s tìm skip tale button
-        var skipTale = await FindMultiScaleAsync(SkipTaleButtonTemplate, timeoutMs: 5000, cancellationToken);
+        // Chờ 2s tìm skip tale button
+        var skipTale = await FindMultiScaleAsync(SkipTaleButtonTemplate, timeoutMs: 1000, cancellationToken);
 
         if (skipTale == null)
         {
@@ -264,8 +276,10 @@ public class NthLv26To44CameraWorkflow : IWorkflow
         int clickY = skipTale.Y + skipTale.Height / 2;
         await _humanSim.MoveMouseAsync(clickX, clickY);
         await _humanSim.LeftClickAsync();
+        await Task.Delay(ShortDelayMs, cancellationToken);
+        await _humanSim.KeyPressAsync(VirtualKeyCode.SPACE);
 
-        // Click mỗi giây cho tới khi menu button xuất hiện hoặc skip tale biến mất
+        // Click mỗi giây cho tới khi qua doan lung tung
         var startTime = DateTime.Now;
         var maxDuration = TimeSpan.FromSeconds(30); // Giới hạn 30s
 
@@ -273,28 +287,56 @@ public class NthLv26To44CameraWorkflow : IWorkflow
         {
             cancellationToken.ThrowIfCancellationRequested();
 
+            var skipbutton3 = await FindMultiScaleAsync(SkipTaleButton3Template, timeoutMs: 200, cancellationToken);
+            var skipbutton4 = await FindMultiScaleAsync(SkipTaleButton4Template, timeoutMs: 200, cancellationToken);
+            var skipbutton5 = await FindMultiScaleAsync(SkipTaleButton5Template, timeoutMs: 200, cancellationToken);
             // Kiểm tra xem menu button đã xuất hiện chưa
-            var menuButton = await FindMultiScaleAsync(MenuButtonTemplate, timeoutMs: 500, cancellationToken);
-            if (menuButton != null)
+            //var menuButton = await FindMultiScaleAsync(MenuButtonTemplate, timeoutMs: 500, cancellationToken);
+            //if (menuButton != null)
+            //{
+            //    Log("[NTH Camera] Menu button appeared, stop clicking skip tale");
+            //    break;
+            //}
+            if (skipbutton3 != null)
             {
-                Log("[NTH Camera] Menu button appeared, stop clicking skip tale");
-                break;
-            }
-
-            // Kiểm tra skip tale còn xuất hiện không
-            var currentSkipTale = await FindMultiScaleAsync(SkipTaleButtonTemplate, timeoutMs: 500, cancellationToken);
-            if (currentSkipTale != null)
-            {
-                // Di chuyển và click vào vị trí mới của skip tale
-                clickX = currentSkipTale.X + currentSkipTale.Width / 2;
-                clickY = currentSkipTale.Y + currentSkipTale.Height / 2;
+                clickX = skipbutton3.X + skipbutton3.Width / 2;
+                clickY = skipbutton3.X + skipbutton3.Height / 2;
                 await _humanSim.MoveMouseAsync(clickX, clickY);
             }
-
-            // Click tại vị trí hiện tại
+            else if (skipbutton4 != null)
+            {
+                clickX = skipbutton4.X + skipbutton4.Width / 2;
+                clickY = skipbutton4.X + skipbutton4.Height / 2;
+                await _humanSim.MoveMouseAsync(clickX, clickY);
+            }
+            else if (skipbutton5 != null)
+            {
+                clickX = skipbutton5.X + skipbutton5.Width / 2;
+                clickY = skipbutton5.X + skipbutton5.Height / 2;
+                await _humanSim.MoveMouseAsync(clickX, clickY);
+            }
+            else
+            {
+                break;
+            }
             await _humanSim.LeftClickAsync();
-            await Task.Delay(MediumDelayMs, cancellationToken);
+            await Task.Delay(ShortDelayMs, cancellationToken);
         }
+        // Kiểm tra skip tale còn xuất hiện không
+        var currentSkipTale = await FindMultiScaleAsync(SkipTaleButtonTemplate, timeoutMs: 500, cancellationToken);
+        if (currentSkipTale != null)
+        {
+            // Di chuyển và click vào vị trí mới của skip tale
+            clickX = currentSkipTale.X + currentSkipTale.Width / 2;
+            clickY = currentSkipTale.Y + currentSkipTale.Height / 2;
+            await _humanSim.MoveMouseAsync(clickX, clickY);
+        }
+
+        // Click tại vị trí hiện tại
+        await _humanSim.LeftClickAsync();
+        await Task.Delay(ShortDelayMs, cancellationToken);
+        await _humanSim.KeyPressAsync(VirtualKeyCode.SPACE);
+        await Task.Delay(MediumDelayMs, cancellationToken);
     }
 
     /// <summary>

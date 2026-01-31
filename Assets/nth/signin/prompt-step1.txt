@@ -15,3 +15,14 @@ bước 1: đăng nhập (asset ở thư mục Templates/nth/signin
  + Đợi ảnh 07_backbutton xuất hiện thì tìm ảnh 08_startbutton2 và di chuyển chuột tới click vào
 
 Trước hết chỉ cần như này đã, các bước còn lại tôi sẽ nói sau
+
+ok giờ hãy code tiếp cho tôi 1 template mới để cày game với flow như sau (mặc định là việc di chuyển chuột, nhập text là giống như người thật và mỗi lần nhập text xong thì đều nên chờ khoảng 1 giây mới làm hành động tiếp, việc ấn ảnh thì mặc định là click chính giữa ảnh và ấn ngay sau khi tìm được ảnh, và sử dụng chiến lược find multi-scale cho mọi ảnh, chọn ảnh giống nhất và sát kích thước nhất, nếu bước nào không tìm được ảnh thì bỏ qua để xuống bước tiếp theo):
+Bước 4: Cài đặt tự động đánh (asset ở thư mục Templates/nth/ingame_settingcombat)
+ + Ấn phím B
+ + Chờ ảnh 02_settingcombat_automedicine xuất hiện và di chuyển tới click vào
+ + Chờ ảnh 03_settingcombat_usemedicine xuất hiện và di chuyển tới click vào
+ + ấn esc, ấn y
+ + Chờ ảnh 01_settingcombat_searchbutton xuất hiện và di chuyển tới, click vào vị trí đó 2 lần mỗi lần cách nhau 500 ms
+ + lần lượt tìm ảnh 05_settingcombat_openauto và 06_settingcombat_quickswap và di chuyển chuột tới click vào mỗi ảnh
+ + ấn esc
+Thêm flow lên GUI của wpf

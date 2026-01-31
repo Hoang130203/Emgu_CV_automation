@@ -26,6 +26,7 @@ public class NthLv26To44MongHoaLucWorkflow : IWorkflow
 
     // Template file names for MHL flow
     private const string MailboxTemplate = "01_mhl_mailbox.png";
+    private const string Mailbox2Template = "01_mhl_mailbox2.png";
     private const string BackButtonTemplate = "02_mhl_backbuttonn.png";
     private const string PostTabTemplate = "03_mhl_posttab.png";
     private const string DiscoverTemplate = "04_mhl_discover.png";
@@ -77,7 +78,15 @@ public class NthLv26To44MongHoaLucWorkflow : IWorkflow
                 MailboxTemplate,
                 timeoutMs: 5000,
                 cancellationToken);
-
+            if (mailbox == null)
+            {
+                // Thử template thay thế
+                Log("[NTH MHL] Mailbox button not found, trying alternative template...");
+                mailbox = await WaitAndClickMultiScaleAsync(
+                    Mailbox2Template,
+                    timeoutMs: 5000,
+                    cancellationToken);
+            }
             if (mailbox == null)
             {
                 return new WorkflowResult
@@ -86,24 +95,24 @@ public class NthLv26To44MongHoaLucWorkflow : IWorkflow
                     Message = "Mailbox button not found within 5 seconds"
                 };
             }
-            await Task.Delay(AfterClickDelayMs, cancellationToken); // Chờ 2s sau khi click
+            //await Task.Delay(AfterClickDelayMs, cancellationToken); // Chờ 2s sau khi click
 
             // ===== BƯỚC 3.2: Chờ và click back button =====
             Log("[NTH MHL] Step 3.2: Looking for back button...");
             var backButton = await WaitAndClickMultiScaleAsync(
                 BackButtonTemplate,
-                timeoutMs: 10000,
+                timeoutMs: 5000,
                 cancellationToken);
 
-            if (backButton == null)
-            {
-                return new WorkflowResult
-                {
-                    Success = false,
-                    Message = "Back button not found"
-                };
-            }
-            await Task.Delay(AfterClickDelayMs, cancellationToken); // Chờ 2s sau khi click
+            //if (backButton == null)
+            //{
+            //    return new WorkflowResult
+            //    {
+            //        Success = false,
+            //        Message = "Back button not found"
+            //    };
+            //}
+            //await Task.Delay(AfterClickDelayMs, cancellationToken); // Chờ 2s sau khi click
 
             // ===== BƯỚC 3.3: Chờ và click post tab =====
             Log("[NTH MHL] Step 3.3: Looking for post tab...");
@@ -120,13 +129,13 @@ public class NthLv26To44MongHoaLucWorkflow : IWorkflow
                     Message = "Post tab not found"
                 };
             }
-            await Task.Delay(AfterClickDelayMs, cancellationToken); // Chờ 2s sau khi click
+            //await Task.Delay(AfterClickDelayMs, cancellationToken); // Chờ 2s sau khi click
 
             // ===== BƯỚC 3.4: Chờ và click discover =====
             Log("[NTH MHL] Step 3.4: Looking for discover button...");
             var discover = await WaitAndClickMultiScaleAsync(
                 DiscoverTemplate,
-                timeoutMs: 10000,
+                timeoutMs: 5000,
                 cancellationToken);
 
             if (discover == null)
@@ -252,7 +261,7 @@ public class NthLv26To44MongHoaLucWorkflow : IWorkflow
                 return best;
             }
 
-            await Task.Delay(300, cancellationToken);
+            await Task.Delay(100, cancellationToken);
         }
 
         return null;
