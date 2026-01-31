@@ -88,7 +88,7 @@ public class NthLv26To44MapWorkflow : IWorkflow
 
             if (zoomButton != null)
             {
-                for (int i = 0; i < 10; i++)
+                for (int i = 0; i < 3; i++)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
 
@@ -316,6 +316,7 @@ public class NthLv26To44MapWorkflow : IWorkflow
         foreach (var num in numbers)
         {
             cancellationToken.ThrowIfCancellationRequested();
+            await Task.Delay(AfterActionDelayMs, cancellationToken);
 
             var templateName = $"map_{num}.png";
             Log($"[NTH Map] Looking for number {num} (threshold 95%)...");
@@ -325,7 +326,7 @@ public class NthLv26To44MapWorkflow : IWorkflow
                 templateName,
                 timeoutMs: 2000,
                 cancellationToken,
-                threshold: 0.95);
+                threshold: 0.85);
 
             if (numButton != null)
             {

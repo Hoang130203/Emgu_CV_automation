@@ -22,7 +22,50 @@ Bước 4: Cài đặt tự động đánh (asset ở thư mục Templates/nth/i
  + Chờ ảnh 02_settingcombat_automedicine xuất hiện và di chuyển tới click vào
  + Chờ ảnh 03_settingcombat_usemedicine xuất hiện và di chuyển tới click vào
  + ấn esc, ấn y
+ + tìm ảnh 04_settingcombat_skip và di chuyển chuột tới ấn vào
  + Chờ ảnh 01_settingcombat_searchbutton xuất hiện và di chuyển tới, click vào vị trí đó 2 lần mỗi lần cách nhau 500 ms
  + lần lượt tìm ảnh 05_settingcombat_openauto và 06_settingcombat_quickswap và di chuyển chuột tới click vào mỗi ảnh
  + ấn esc
 Thêm flow lên GUI của wpf
+
+ok giờ hãy code tiếp cho tôi 1 template mới để cày game với flow như sau (mặc định là việc di chuyển chuột, nhập text là giống như người thật và mỗi lần nhập text xong thì đều nên chờ khoảng 0.5 giây mới làm hành động tiếp, việc ấn ảnh thì mặc định là click chính giữa ảnh và ấn ngay sau khi tìm được ảnh, và sử dụng chiến lược find multi-scale cho mọi ảnh, chọn ảnh giống nhất và sát kích thước nhất, nếu bước nào không tìm được ảnh thì bỏ qua để xuống bước tiếp theo):
+Bước 5: Tìm đường tới rương báu (asset ở thư mục Template/nth/ingame_map)
+ + ấn phím M
+ + Chờ ảnh 02_map_zoomupbutton, di chuyển chuột tới và click vào vị trí đó 10 lần liên tục, cách nhau 0.2s, trong quá trình đó nếu xuất hiện ảnh 03_map_skipinstruction thì di chuột tới click vào, ấn space
+ + Tìm ảnh 04_map_inputbutton di chuyển chuột tới và ấn vào
+ + Có các ảnh số từ 1 tới 9 với tên map_x.png (x là số) và lần lượt tìm và click số 8 -> 5 -> 9 
+ + Tìm ảnh 06_map_zindex555 và click vào chính giữa ảnh 06_map_zindex555 và ảnh 04_map_inputbutton sau đó lần lượt tìm và di chuột tới click số 9 -> 8 -> 3
+ + Tìm ảnh 05_map_follow và di chuột tới click vào
+ + Ấn esc
+ + Delay 500ms,  ấn E 2 lần Nếu xuất hiện ảnh 07_map_ruong thì di chuyển chuột tới và ấn vào, nếu k thấy thì tìm ảnh 07_map_ruong2 nếu có thì ấn phím F. Nếu vẫn k có thì quay lại ấn E 2 lần và quay lại tìm ảnh, cứ thế nếu k thấy 2 ảnh rương thì dừng lại bước này sau 3 lần k thấy 
+Thêm flow lên GUI của wpf
+
+ok giờ hãy code tiếp cho tôi 1 template mới để cày game với flow như sau (mặc định là việc di chuyển chuột, nhập text là giống như người thật và mỗi lần nhập text xong thì đều nên chờ khoảng 0.5 giây mới làm hành động tiếp, việc ấn ảnh thì mặc định là click chính giữa ảnh và ấn ngay sau khi tìm được ảnh, và sử dụng chiến lược find multi-scale cho mọi ảnh, chọn ảnh giống nhất và sát kích thước nhất, nếu bước nào không tìm được ảnh thì bỏ qua để xuống bước tiếp theo):
+Bước 6: Nhiệm vụ hàng ngày (asset ở thư mục Template/nth/ingame_daily)
+ + Tìm ảnh 01_daily_openbutton trên màn hình, nếu k tìm thấy thì ấn esc và tìm lại, cứ thế 5 lần k được thì dừng
+ + di chuyển chuột tới click vào
+ + bắt đầu 1 vòng lặp nếu tìm thấy 1 trong các ảnh 02_daily_maintail hoặc 03_daily_adventure hoặc 04_daily_photograph hoặc 06_daily_mhl thì click vào ảnh đầu tiên tìm được, bắt đầu vòng lặp mới, nếu như không tìm thấy ảnh nào trong mấy ảnh trên thì tìm ảnh 05_daily_reset và di chuột click vào, bắt đầu 1 vòng lặp mới cho tới khi click đủ 4 lần thì bắt đầu 1 vòng lặp khác: tìm ảnh 07_daily_dungoan nếu k có thì tìm ảnh 05_daily_reset và click vào cho tới khi thấy 07... thì di chuột click vào, timeout search mấy ảnh trên cứ để 0.5 giây thôi và sau mỗi lần click thì delay 0.5s
+Thêm flow lên GUI của wpf
+
+
+ok giờ hãy code tiếp cho tôi 1 template mới để cày game với flow như sau (mặc định là việc di chuyển chuột, nhập text là giống như người thật và mỗi lần nhập text xong thì đều nên chờ khoảng 0.3 giây mới làm hành động tiếp, việc ấn ảnh thì mặc định là click chính giữa ảnh và ấn ngay sau khi tìm được ảnh, và sử dụng chiến lược find multi-scale cho mọi ảnh, chọn ảnh giống nhất và sát kích thước nhất, nếu bước nào không tìm được ảnh thì bỏ qua để xuống bước tiếp theo):
+Bước 7: Du ngoạn (asset ở thư mục Template/nth/dungoan)
++ Đợi ảnh 01_dungoan_skip với timeout 10s và di chuyển chuột tới click vào
++ Delay 0.2s và ấn space
++ Tìm ảnh 02_dungoan_maintale và di chuyển chuột tới click vào với timeout 20s
++ Chờ ảnh 03_dungoan_startevent và di chuyển ấn chuột
++ Khi ảnh 04_dungoan_nameevent còn xuất hiện và chưa xuất hiện 05_dungoan_godungeon thì mỗi nửa giây di chuột tới 04_dungoan_nameevent và click vào đó, nếu đã xuất hiện 05 thì di chuyển chuột tới 05_dungoan_godungeon
++ chờ ảnh 06_dungoan_skip xuất hiện thì di chuột tới ấn vào
++ delay 0.2s và ấn space
++ vòng lặp: ấn E liên tục mỗi 0.05s cho tới khi gặp ảnh 07_dungoan_reborn thì di chuột tới ấn vào rồi lại ấn E liên tục hoặc gặp ảnh 08_dungoan_doneevent thì di chuột tới click vào sau đó chờ ảnh dungoan_closeevent thì di chuột tới click vào
++ Chờ ảnh 10_dungoan_dailydone di chuuootj tới và click vào
+Thêm flow lên GUI
+
+ok giờ hãy code tiếp cho tôi 1 template mới để cày game với flow như sau (mặc định là việc di chuyển chuột, nhập text là giống như người thật và mỗi lần nhập text xong thì đều nên chờ khoảng 0.3 giây mới làm hành động tiếp, việc ấn ảnh thì mặc định là click chính giữa ảnh và ấn ngay sau khi tìm được ảnh, và sử dụng chiến lược find multi-scale cho mọi ảnh, chọn ảnh giống nhất và sát kích thước nhất, nếu bước nào không tìm được ảnh thì bỏ qua để xuống bước tiếp theo):
+Bước 8: Đăng xuất (asset ở thư mục Template/nth/signout)
+ + Ấn esc
+ + Tìm ảnh 01_signout_setting và di chuột tới click
+ + Tìm ảnh 02_signout_signout và tìm ảnh 03_signout_signout_button nằm trong ảnh 02.. đó và di chuyển tới click vào
+ + Ấn Space
+ + đợi ảnh 04_signout_otheraccount xuất hiện với timeout cứ để 30s và click vào 2 lần, cách nhau 1s
+ + tìm ảnh 05_signout_zingsignin và di chuột tới click vào 

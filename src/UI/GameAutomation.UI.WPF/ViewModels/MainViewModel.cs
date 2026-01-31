@@ -86,6 +86,9 @@ public partial class MainViewModel : ObservableObject
         Workflows.Add(new WorkflowViewModel("NTH Lv26-44 MHL", this));
         Workflows.Add(new WorkflowViewModel("NTH Lv26-44 Combat", this));
         Workflows.Add(new WorkflowViewModel("NTH Lv26-44 Map", this));
+        Workflows.Add(new WorkflowViewModel("NTH Lv26-44 Daily", this));
+        Workflows.Add(new WorkflowViewModel("NTH Dungoan", this));
+        Workflows.Add(new WorkflowViewModel("NTH Signout", this));
         Workflows.Add(new WorkflowViewModel("Auto-Farm Workflow", this));
         Workflows.Add(new WorkflowViewModel("Combat Sequence", this));
 
@@ -231,6 +234,15 @@ public partial class MainViewModel : ObservableObject
                 break;
             case "NTH Lv26-44 Map":
                 await RunNthMapFlowAsync(workflow);
+                break;
+            case "NTH Lv26-44 Daily":
+                await RunNthDailyFlowAsync(workflow);
+                break;
+            case "NTH Dungoan":
+                await RunNthDungoanFlowAsync(workflow);
+                break;
+            case "NTH Signout":
+                await RunNthSignoutFlowAsync(workflow);
                 break;
             case "Auto-Farm Workflow":
                 AddLog($"[{workflow.Name}] Not implemented yet.");
@@ -829,6 +841,216 @@ public partial class MainViewModel : ObservableObject
         catch (Exception ex)
         {
             AddLog($"[NTH Map] Error: {ex.Message}");
+            workflow.Status = "Error";
+            RestoreMainWindow();
+        }
+    }
+
+    /// <summary>
+    /// Flow NTH Daily: Quy trình bước 6 cho game từ level 26-44
+    /// Nhiệm vụ hàng ngày: Open daily -> Complete tasks -> Reset if needed
+    /// </summary>
+    private async Task RunNthDailyFlowAsync(WorkflowViewModel workflow)
+    {
+        if (_botCancellationTokenSource == null || _botCancellationTokenSource.IsCancellationRequested)
+        {
+            AddLog("[NTH Daily] Bot not running.");
+            return;
+        }
+
+        // Minimize app to allow screen capture of game
+        Application.Current.Dispatcher.Invoke(() =>
+        {
+            Application.Current.MainWindow.WindowState = WindowState.Minimized;
+        });
+
+        // Wait a bit for window to minimize
+        await Task.Delay(500);
+
+        workflow.Status = "Running";
+        var token = _botCancellationTokenSource.Token;
+
+        try
+        {
+            AddLog("[NTH Daily] Starting Step 6: Daily Quest workflow...");
+
+            // Run workflow on background thread
+            await Task.Run(async () =>
+            {
+                var inputService = new InputService();
+                var dailyWorkflow = new NthLv26To44DailyWorkflow(
+                    _visionService,
+                    inputService,
+                    assetsPath: Path.Combine(_templatesFolder, "nth", "ingame_daily"),
+                    logger: msg => AddLog(msg));
+
+                var context = new GameContext { GameName = "NTH Game" };
+                var result = await dailyWorkflow.ExecuteAsync(context, token);
+
+                if (result.Success)
+                {
+                    AddLog($"[NTH Daily] Completed: {result.Message}");
+                    UpdateWorkflowStatus(workflow, "Ready", incrementExecution: true);
+                }
+                else
+                {
+                    AddLog($"[NTH Daily] Failed: {result.Message}");
+                    UpdateWorkflowStatus(workflow, "Failed");
+                }
+
+                // Restore window after completion
+                RestoreMainWindow();
+            }, token);
+        }
+        catch (OperationCanceledException)
+        {
+            AddLog("[NTH Daily] Cancelled.");
+            workflow.Status = "Cancelled";
+            RestoreMainWindow();
+        }
+        catch (Exception ex)
+        {
+            AddLog($"[NTH Daily] Error: {ex.Message}");
+            workflow.Status = "Error";
+            RestoreMainWindow();
+        }
+    }
+
+    /// <summary>
+    /// Flow NTH Dungoan: Quy trình bước 7
+    /// Du ngoạn: Skip -> Main tale -> Start event -> Dungeon -> Done
+    /// </summary>
+    private async Task RunNthDungoanFlowAsync(WorkflowViewModel workflow)
+    {
+        if (_botCancellationTokenSource == null || _botCancellationTokenSource.IsCancellationRequested)
+        {
+            AddLog("[NTH Dungoan] Bot not running.");
+            return;
+        }
+
+        // Minimize app to allow screen capture of game
+        Application.Current.Dispatcher.Invoke(() =>
+        {
+            Application.Current.MainWindow.WindowState = WindowState.Minimized;
+        });
+
+        // Wait a bit for window to minimize
+        await Task.Delay(500);
+
+        workflow.Status = "Running";
+        var token = _botCancellationTokenSource.Token;
+
+        try
+        {
+            AddLog("[NTH Dungoan] Starting Step 7: Du Ngoan workflow...");
+
+            // Run workflow on background thread
+            await Task.Run(async () =>
+            {
+                var inputService = new InputService();
+                var dungoanWorkflow = new NthDungoanWorkflow(
+                    _visionService,
+                    inputService,
+                    assetsPath: Path.Combine(_templatesFolder, "nth", "ingame_dungoan"),
+                    logger: msg => AddLog(msg));
+
+                var context = new GameContext { GameName = "NTH Game" };
+                var result = await dungoanWorkflow.ExecuteAsync(context, token);
+
+                if (result.Success)
+                {
+                    AddLog($"[NTH Dungoan] Completed: {result.Message}");
+                    UpdateWorkflowStatus(workflow, "Ready", incrementExecution: true);
+                }
+                else
+                {
+                    AddLog($"[NTH Dungoan] Failed: {result.Message}");
+                    UpdateWorkflowStatus(workflow, "Failed");
+                }
+
+                // Restore window after completion
+                RestoreMainWindow();
+            }, token);
+        }
+        catch (OperationCanceledException)
+        {
+            AddLog("[NTH Dungoan] Cancelled.");
+            workflow.Status = "Cancelled";
+            RestoreMainWindow();
+        }
+        catch (Exception ex)
+        {
+            AddLog($"[NTH Dungoan] Error: {ex.Message}");
+            workflow.Status = "Error";
+            RestoreMainWindow();
+        }
+    }
+
+    /// <summary>
+    /// Flow NTH Signout: Quy trình bước 8
+    /// Đăng xuất: Esc -> Settings -> Signout -> Other account -> Zing signin
+    /// </summary>
+    private async Task RunNthSignoutFlowAsync(WorkflowViewModel workflow)
+    {
+        if (_botCancellationTokenSource == null || _botCancellationTokenSource.IsCancellationRequested)
+        {
+            AddLog("[NTH Signout] Bot not running.");
+            return;
+        }
+
+        // Minimize app to allow screen capture of game
+        Application.Current.Dispatcher.Invoke(() =>
+        {
+            Application.Current.MainWindow.WindowState = WindowState.Minimized;
+        });
+
+        // Wait a bit for window to minimize
+        await Task.Delay(500);
+
+        workflow.Status = "Running";
+        var token = _botCancellationTokenSource.Token;
+
+        try
+        {
+            AddLog("[NTH Signout] Starting Step 8: Signout workflow...");
+
+            // Run workflow on background thread
+            await Task.Run(async () =>
+            {
+                var inputService = new InputService();
+                var signoutWorkflow = new NthSignoutWorkflow(
+                    _visionService,
+                    inputService,
+                    assetsPath: Path.Combine(_templatesFolder, "nth", "signout"),
+                    logger: msg => AddLog(msg));
+
+                var context = new GameContext { GameName = "NTH Game" };
+                var result = await signoutWorkflow.ExecuteAsync(context, token);
+
+                if (result.Success)
+                {
+                    AddLog($"[NTH Signout] Completed: {result.Message}");
+                    UpdateWorkflowStatus(workflow, "Ready", incrementExecution: true);
+                }
+                else
+                {
+                    AddLog($"[NTH Signout] Failed: {result.Message}");
+                    UpdateWorkflowStatus(workflow, "Failed");
+                }
+
+                // Restore window after completion
+                RestoreMainWindow();
+            }, token);
+        }
+        catch (OperationCanceledException)
+        {
+            AddLog("[NTH Signout] Cancelled.");
+            workflow.Status = "Cancelled";
+            RestoreMainWindow();
+        }
+        catch (Exception ex)
+        {
+            AddLog($"[NTH Signout] Error: {ex.Message}");
             workflow.Status = "Error";
             RestoreMainWindow();
         }

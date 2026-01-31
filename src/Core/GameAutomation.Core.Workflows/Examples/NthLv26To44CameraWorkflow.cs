@@ -151,6 +151,8 @@ public class NthLv26To44CameraWorkflow : IWorkflow
             {
                 Log("[NTH Camera] Camera enter button found, pressing Enter...");
                 await _humanSim.KeyPressAsync(VirtualKeyCode.RETURN);
+                await Task.Delay(LongDelayMs, cancellationToken);
+                await ClickCenterScreenMultipleTimesAsync(screenWidth / 2, screenHeight / 2, 2, MediumDelayMs, cancellationToken);
                 await Task.Delay(MediumDelayMs, cancellationToken);
 
                 // Chờ xem có skip button không (timeout 2s)
