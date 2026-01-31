@@ -82,6 +82,8 @@ public partial class MainViewModel : ObservableObject
         // Add workflows - truyền reference để gọi command
         Workflows.Add(new WorkflowViewModel("Open Excel Flow", this));
         Workflows.Add(new WorkflowViewModel("NTH Sign-in Flow", this));
+        Workflows.Add(new WorkflowViewModel("NTH Lv26-44 Camera", this));
+        Workflows.Add(new WorkflowViewModel("NTH Lv26-44 MHL", this));
         Workflows.Add(new WorkflowViewModel("Auto-Farm Workflow", this));
         Workflows.Add(new WorkflowViewModel("Combat Sequence", this));
 
@@ -215,6 +217,12 @@ public partial class MainViewModel : ObservableObject
                 break;
             case "NTH Sign-in Flow":
                 await RunNthSigninFlowAsync(workflow);
+                break;
+            case "NTH Lv26-44 Camera":
+                await RunNthCameraFlowAsync(workflow);
+                break;
+            case "NTH Lv26-44 MHL":
+                await RunNthMongHoaLucFlowAsync(workflow);
                 break;
             case "Auto-Farm Workflow":
                 AddLog($"[{workflow.Name}] Not implemented yet.");
@@ -534,6 +542,145 @@ public partial class MainViewModel : ObservableObject
         catch (Exception ex)
         {
             AddLog($"[NTH Sign-in] Error: {ex.Message}");
+            workflow.Status = "Error";
+            RestoreMainWindow();
+        }
+    }
+
+    /// <summary>
+    /// Flow NTH Camera: Quy trình camera cho game từ level 26-44
+    /// </summary>
+    private async Task RunNthCameraFlowAsync(WorkflowViewModel workflow)
+    {
+        if (_botCancellationTokenSource == null || _botCancellationTokenSource.IsCancellationRequested)
+        {
+            AddLog("[NTH Camera] Bot not running.");
+            return;
+        }
+
+        // Minimize app to allow screen capture of game
+        Application.Current.Dispatcher.Invoke(() =>
+        {
+            Application.Current.MainWindow.WindowState = WindowState.Minimized;
+        });
+
+        // Wait a bit for window to minimize
+        await Task.Delay(500);
+
+        workflow.Status = "Running";
+        var token = _botCancellationTokenSource.Token;
+
+        try
+        {
+            AddLog("[NTH Camera] Starting Step 2: Camera workflow...");
+
+            // Run workflow on background thread
+            await Task.Run(async () =>
+            {
+                var inputService = new InputService();
+                var cameraWorkflow = new NthLv26To44CameraWorkflow(
+                    _visionService,
+                    inputService,
+                    assetsPath: Path.Combine(_templatesFolder, "nth", "ingame_camera"),
+                    logger: msg => AddLog(msg));
+
+                var context = new GameContext { GameName = "NTH Game" };
+                var result = await cameraWorkflow.ExecuteAsync(context, token);
+
+                if (result.Success)
+                {
+                    AddLog($"[NTH Camera] Completed successfully!");
+                    UpdateWorkflowStatus(workflow, "Ready", incrementExecution: true);
+                }
+                else
+                {
+                    AddLog($"[NTH Camera] Failed: {result.Message}");
+                    UpdateWorkflowStatus(workflow, "Failed");
+                }
+
+                // Restore window after completion
+                RestoreMainWindow();
+            }, token);
+        }
+        catch (OperationCanceledException)
+        {
+            AddLog("[NTH Camera] Cancelled.");
+            workflow.Status = "Cancelled";
+            RestoreMainWindow();
+        }
+        catch (Exception ex)
+        {
+            AddLog($"[NTH Camera] Error: {ex.Message}");
+            workflow.Status = "Error";
+            RestoreMainWindow();
+        }
+    }
+
+    /// <summary>
+    /// Flow NTH Mộng Hoa Lục: Quy trình bước 3 cho game từ level 26-44
+    /// Mở mailbox -> Like posts -> Exit
+    /// </summary>
+    private async Task RunNthMongHoaLucFlowAsync(WorkflowViewModel workflow)
+    {
+        if (_botCancellationTokenSource == null || _botCancellationTokenSource.IsCancellationRequested)
+        {
+            AddLog("[NTH MHL] Bot not running.");
+            return;
+        }
+
+        // Minimize app to allow screen capture of game
+        Application.Current.Dispatcher.Invoke(() =>
+        {
+            Application.Current.MainWindow.WindowState = WindowState.Minimized;
+        });
+
+        // Wait a bit for window to minimize
+        await Task.Delay(500);
+
+        workflow.Status = "Running";
+        var token = _botCancellationTokenSource.Token;
+
+        try
+        {
+            AddLog("[NTH MHL] Starting Step 3: Mộng Hoa Lục workflow...");
+
+            // Run workflow on background thread
+            await Task.Run(async () =>
+            {
+                var inputService = new InputService();
+                var mhlWorkflow = new NthLv26To44MongHoaLucWorkflow(
+                    _visionService,
+                    inputService,
+                    assetsPath: Path.Combine(_templatesFolder, "nth", "ingame_monghoaluc"),
+                    logger: msg => AddLog(msg));
+
+                var context = new GameContext { GameName = "NTH Game" };
+                var result = await mhlWorkflow.ExecuteAsync(context, token);
+
+                if (result.Success)
+                {
+                    AddLog($"[NTH MHL] Completed successfully!");
+                    UpdateWorkflowStatus(workflow, "Ready", incrementExecution: true);
+                }
+                else
+                {
+                    AddLog($"[NTH MHL] Failed: {result.Message}");
+                    UpdateWorkflowStatus(workflow, "Failed");
+                }
+
+                // Restore window after completion
+                RestoreMainWindow();
+            }, token);
+        }
+        catch (OperationCanceledException)
+        {
+            AddLog("[NTH MHL] Cancelled.");
+            workflow.Status = "Cancelled";
+            RestoreMainWindow();
+        }
+        catch (Exception ex)
+        {
+            AddLog($"[NTH MHL] Error: {ex.Message}");
             workflow.Status = "Error";
             RestoreMainWindow();
         }

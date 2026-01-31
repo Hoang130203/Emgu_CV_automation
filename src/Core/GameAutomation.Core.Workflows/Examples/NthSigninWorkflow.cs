@@ -185,14 +185,14 @@ public class NthSigninWorkflow : IWorkflow
 
             // Step 9: Wait for back button, then find and click start button 2
             Log("[NTH Signin] Step 8: Waiting for back button to appear...");
-            var backButton = await FindMultiScaleAsync(BackButtonTemplate, timeoutMs: 15000, cancellationToken);
+            var backButton = await FindMultiScaleAsync(BackButtonTemplate, timeoutMs: 30000, cancellationToken);
 
             if (backButton != null)
             {
                 Log("[NTH Signin] Back button found, finding start button 2...");
                 var startButton2 = await WaitAndClickMultiScaleAsync(
                     StartButton2Template,
-                    timeoutMs: 5000,
+                    timeoutMs: 15000,
                     cancellationToken);
 
                 if (startButton2 == null)

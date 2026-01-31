@@ -4,7 +4,7 @@ using System.Runtime.InteropServices;
 namespace GameAutomation.Core.Services.Input;
 
 /// <summary>
-/// Input service implementation using Win32 API
+/// Input service implementation using Win32 API (SendInput for keyboard)
 /// </summary>
 public class InputService : IInputService
 {
@@ -25,12 +25,60 @@ public class InputService : IInputService
     [DllImport("user32.dll")]
     private static extern bool SetProcessDPIAware();
 
+    [DllImport("user32.dll", SetLastError = true)]
+    private static extern uint SendInput(uint nInputs, INPUT[] pInputs, int cbSize);
+
+    [DllImport("user32.dll")]
+    private static extern uint MapVirtualKey(uint uCode, uint uMapType);
+
     [StructLayout(LayoutKind.Sequential)]
     private struct POINT
     {
         public int X;
         public int Y;
     }
+
+    // SendInput structures
+    [StructLayout(LayoutKind.Sequential)]
+    private struct INPUT
+    {
+        public uint type;
+        public InputUnion u;
+    }
+
+    [StructLayout(LayoutKind.Explicit)]
+    private struct InputUnion
+    {
+        [FieldOffset(0)] public MOUSEINPUT mi;
+        [FieldOffset(0)] public KEYBDINPUT ki;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct MOUSEINPUT
+    {
+        public int dx;
+        public int dy;
+        public uint mouseData;
+        public uint dwFlags;
+        public uint time;
+        public IntPtr dwExtraInfo;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct KEYBDINPUT
+    {
+        public ushort wVk;
+        public ushort wScan;
+        public uint dwFlags;
+        public uint time;
+        public IntPtr dwExtraInfo;
+    }
+
+    private const uint INPUT_KEYBOARD = 1;
+    private const uint KEYEVENTF_EXTENDEDKEY = 0x0001;
+    private const uint KEYEVENTF_KEYUP_SEND = 0x0002;
+    private const uint KEYEVENTF_SCANCODE = 0x0008;
+    private const uint MAPVK_VK_TO_VSC = 0;
 
     private const uint MOUSEEVENTF_LEFTDOWN = 0x0002;
     private const uint MOUSEEVENTF_LEFTUP = 0x0004;
@@ -114,8 +162,29 @@ public class InputService : IInputService
 
     public void KeyPress(VirtualKeyCode key)
     {
-        keybd_event((byte)key, 0, KEYEVENTF_KEYDOWN, 0);
-        keybd_event((byte)key, 0, KEYEVENTF_KEYUP, 0);
+        // Sử dụng SendInput thay vì keybd_event để hoạt động tốt hơn với game
+        ushort vk = (ushort)key;
+        ushort scanCode = (ushort)MapVirtualKey(vk, MAPVK_VK_TO_VSC);
+
+        var inputs = new INPUT[2];
+
+        // Key down
+        inputs[0].type = INPUT_KEYBOARD;
+        inputs[0].u.ki.wVk = vk;
+        inputs[0].u.ki.wScan = scanCode;
+        inputs[0].u.ki.dwFlags = KEYEVENTF_SCANCODE;
+        inputs[0].u.ki.time = 0;
+        inputs[0].u.ki.dwExtraInfo = IntPtr.Zero;
+
+        // Key up
+        inputs[1].type = INPUT_KEYBOARD;
+        inputs[1].u.ki.wVk = vk;
+        inputs[1].u.ki.wScan = scanCode;
+        inputs[1].u.ki.dwFlags = KEYEVENTF_SCANCODE | KEYEVENTF_KEYUP_SEND;
+        inputs[1].u.ki.time = 0;
+        inputs[1].u.ki.dwExtraInfo = IntPtr.Zero;
+
+        SendInput(2, inputs, Marshal.SizeOf(typeof(INPUT)));
     }
 
     public void KeyPress(char character)
@@ -140,23 +209,73 @@ public class InputService : IInputService
 
     public void KeyDown(VirtualKeyCode key)
     {
-        keybd_event((byte)key, 0, KEYEVENTF_KEYDOWN, 0);
+        ushort vk = (ushort)key;
+        ushort scanCode = (ushort)MapVirtualKey(vk, MAPVK_VK_TO_VSC);
+
+        var inputs = new INPUT[1];
+        inputs[0].type = INPUT_KEYBOARD;
+        inputs[0].u.ki.wVk = vk;
+        inputs[0].u.ki.wScan = scanCode;
+        inputs[0].u.ki.dwFlags = KEYEVENTF_SCANCODE;
+        inputs[0].u.ki.time = 0;
+        inputs[0].u.ki.dwExtraInfo = IntPtr.Zero;
+
+        SendInput(1, inputs, Marshal.SizeOf(typeof(INPUT)));
     }
 
     public void KeyUp(VirtualKeyCode key)
     {
-        keybd_event((byte)key, 0, KEYEVENTF_KEYUP, 0);
+        ushort vk = (ushort)key;
+        ushort scanCode = (ushort)MapVirtualKey(vk, MAPVK_VK_TO_VSC);
+
+        var inputs = new INPUT[1];
+        inputs[0].type = INPUT_KEYBOARD;
+        inputs[0].u.ki.wVk = vk;
+        inputs[0].u.ki.wScan = scanCode;
+        inputs[0].u.ki.dwFlags = KEYEVENTF_SCANCODE | KEYEVENTF_KEYUP_SEND;
+        inputs[0].u.ki.time = 0;
+        inputs[0].u.ki.dwExtraInfo = IntPtr.Zero;
+
+        SendInput(1, inputs, Marshal.SizeOf(typeof(INPUT)));
     }
 
     public void KeyCombination(params VirtualKeyCode[] keys)
     {
+        // Tạo array đủ cho cả key down và key up
+        var inputs = new INPUT[keys.Length * 2];
+        int index = 0;
+
         // Press all keys down
         foreach (var key in keys)
-            keybd_event((byte)key, 0, KEYEVENTF_KEYDOWN, 0);
+        {
+            ushort vk = (ushort)key;
+            ushort scanCode = (ushort)MapVirtualKey(vk, MAPVK_VK_TO_VSC);
+
+            inputs[index].type = INPUT_KEYBOARD;
+            inputs[index].u.ki.wVk = vk;
+            inputs[index].u.ki.wScan = scanCode;
+            inputs[index].u.ki.dwFlags = KEYEVENTF_SCANCODE;
+            inputs[index].u.ki.time = 0;
+            inputs[index].u.ki.dwExtraInfo = IntPtr.Zero;
+            index++;
+        }
 
         // Release all keys in reverse order
         for (int i = keys.Length - 1; i >= 0; i--)
-            keybd_event((byte)keys[i], 0, KEYEVENTF_KEYUP, 0);
+        {
+            ushort vk = (ushort)keys[i];
+            ushort scanCode = (ushort)MapVirtualKey(vk, MAPVK_VK_TO_VSC);
+
+            inputs[index].type = INPUT_KEYBOARD;
+            inputs[index].u.ki.wVk = vk;
+            inputs[index].u.ki.wScan = scanCode;
+            inputs[index].u.ki.dwFlags = KEYEVENTF_SCANCODE | KEYEVENTF_KEYUP_SEND;
+            inputs[index].u.ki.time = 0;
+            inputs[index].u.ki.dwExtraInfo = IntPtr.Zero;
+            index++;
+        }
+
+        SendInput((uint)inputs.Length, inputs, Marshal.SizeOf(typeof(INPUT)));
     }
 
     public void TypeText(string text)
