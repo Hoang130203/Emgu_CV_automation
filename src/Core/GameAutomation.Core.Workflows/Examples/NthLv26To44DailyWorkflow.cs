@@ -252,7 +252,7 @@ public class NthLv26To44DailyWorkflow : IWorkflow
             var results = _visionService.FindTemplateMultiScale(
                 screenshot,
                 resetPath,
-                MatchThreshold + 0.1,
+                MatchThreshold + 0.05,
                 MinScale,
                 MaxScale,
                 ScaleSteps);
@@ -267,7 +267,7 @@ public class NthLv26To44DailyWorkflow : IWorkflow
             var results2 = _visionService.FindTemplateMultiScale(
                 screenshot,
                 reset2Path,
-                MatchThreshold + 0.1,
+                MatchThreshold + 0.05,
                 MinScale,
                 MaxScale,
                 ScaleSteps);
@@ -280,8 +280,11 @@ public class NthLv26To44DailyWorkflow : IWorkflow
             return false;
         }
 
+        // Loc cac nut qua gan nhau (duoi 10px ca X lan Y), chi giu lai nut co Confidence cao nhat
+        var filteredResets = FilterNearbyButtons(allResets, minDistance: 10);
+
         // Sap xep theo vi tri Y (tu tren xuong duoi) de click co thu tu
-        var sortedResets = allResets.OrderBy(r => r.Y).ThenBy(r => r.X).ToList();
+        var sortedResets = filteredResets.OrderBy(r => r.Y).ThenBy(r => r.X).ToList();
 
         Log($"[NTH Daily] Found {sortedResets.Count} reset button(s), clicking all...");
 
@@ -329,7 +332,7 @@ public class NthLv26To44DailyWorkflow : IWorkflow
                 template,
                 timeoutMs: 200,  // Tim nhanh
                 cancellationToken,
-                0.92);
+                0.95);
 
             if (result != null)
             {
@@ -424,6 +427,38 @@ public class NthLv26To44DailyWorkflow : IWorkflow
         }
 
         return null;
+    }
+
+    /// <summary>
+    /// Filter out nearby buttons, keeping only the one with highest confidence
+    /// Two buttons are considered "nearby" if their distance is less than minDistance in both X and Y
+    /// </summary>
+    private System.Collections.Generic.List<DetectionResult> FilterNearbyButtons(
+        System.Collections.Generic.List<DetectionResult> buttons,
+        int minDistance)
+    {
+        if (buttons.Count <= 1)
+            return buttons;
+
+        // Sap xep theo Confidence giam dan de uu tien giu lai nut co do chinh xac cao nhat
+        var sortedByConfidence = buttons.OrderByDescending(b => b.Confidence).ToList();
+        var result = new System.Collections.Generic.List<DetectionResult>();
+
+        foreach (var button in sortedByConfidence)
+        {
+            // Kiem tra xem co nut nao trong result gan voi button hien tai khong
+            bool isTooClose = result.Any(existing =>
+                Math.Abs(existing.X - button.X) < minDistance &&
+                Math.Abs(existing.Y - button.Y) < minDistance);
+
+            if (!isTooClose)
+            {
+                result.Add(button);
+            }
+        }
+
+        Log($"[NTH Daily] Filtered reset buttons: {buttons.Count} -> {result.Count} (min distance: {minDistance}px)");
+        return result;
     }
 
     /// <summary>

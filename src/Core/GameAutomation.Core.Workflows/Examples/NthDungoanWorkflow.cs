@@ -162,6 +162,10 @@ public class NthDungoanWorkflow : IWorkflow
                 if (nameEvent != null)
                 {
                     await ClickAtCenterAsync(nameEvent);
+                    await Task.Delay(ShortDelayMs, cancellationToken);
+                    await ClickAtCenterAsync(nameEvent);
+                    await Task.Delay(ShortDelayMs, cancellationToken);
+                    await ClickAtCenterAsync(nameEvent);
                     nameEventClicks++;
                 }
                 else

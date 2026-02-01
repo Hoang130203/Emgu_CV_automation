@@ -73,3 +73,6 @@ Bước 8: Đăng xuất (asset ở thư mục Template/nth/signout)
 
 ok giờ hãy tạo 1 template và thêm vào UI là tổng hợp tất cả các bước game với thứ tự:
 Sign-In -> Chờ 10s -> Camera -> MHL -> Combat -> Map -> Daily -> Dungoan -> Signout
+sửa lại 1 chút nhé. Sign-In -> Chờ tới khi ảnh nth/ingame_daily/01_daily_openbutton xuất hiện -> Camera -> MHL -> Combat -> Map -> Daily nhưng sửa daily vì có vẻ như bạn đang quên mất logic này bắt đầu 1 vòng lặp mới cho tới khi click đủ 4 lần thì bắt đầu 1 vòng lặp khác: tìm ảnh 07_daily_dungoan nếu k có thì tìm ảnh 05_daily_reset và click vào cho tới khi thấy 07, nhớ là cho tới khi click đủ 4 cái 02_daily_maintail và 03_daily_adventure và 04_daily_photograph và 06_daily_mhl thì mới tìm 07 -> Dungoan ở cuối cùng mà không thấy 10_dungoan_dailydone thì ấn lại F1 và tìm lại -> Signout sửa 1 chút là nếu sau khi ấn esc mà không thấy 01_signout_setting thì ấn lại cho tới khi nào thấy thì tiếp tục (tối đa 4 lần)
+
+sửa dailyworkflow để lúc lấy các resetbutton thì lọc ra những nút có vị trí cách nhau dưới 10px cả theo X lẫn Y, chỉ giữ lại nút có tỷ lệ chính xác cao nhất         var sortedResets = allResets.OrderBy(r => r.Y).ThenBy(r => r.X).ToList();
