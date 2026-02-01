@@ -289,9 +289,9 @@ public class NthLv26To44CameraWorkflow : IWorkflow
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            var skipbutton3 = await FindMultiScaleAsync(SkipTaleButton3Template, timeoutMs: 200, cancellationToken);
-            var skipbutton4 = await FindMultiScaleAsync(SkipTaleButton4Template, timeoutMs: 200, cancellationToken);
-            var skipbutton5 = await FindMultiScaleAsync(SkipTaleButton5Template, timeoutMs: 200, cancellationToken);
+            var skipbutton3 = await FindMultiScaleAsync(SkipTaleButton3Template, timeoutMs: 500, cancellationToken);
+            var skipbutton4 = await FindMultiScaleAsync(SkipTaleButton4Template, timeoutMs: 500, cancellationToken);
+            var skipbutton5 = await FindMultiScaleAsync(SkipTaleButton5Template, timeoutMs: 500, cancellationToken);
             // Kiểm tra xem menu button đã xuất hiện chưa
             //var menuButton = await FindMultiScaleAsync(MenuButtonTemplate, timeoutMs: 500, cancellationToken);
             //if (menuButton != null)
@@ -322,7 +322,7 @@ public class NthLv26To44CameraWorkflow : IWorkflow
                 break;
             }
             await _humanSim.LeftClickAsync();
-            await Task.Delay(ShortDelayMs, cancellationToken);
+            await Task.Delay(LongDelayMs, cancellationToken);
         }
         // Kiểm tra skip tale còn xuất hiện không
         var currentSkipTale = await FindMultiScaleAsync(SkipTaleButtonTemplate, timeoutMs: 500, cancellationToken);

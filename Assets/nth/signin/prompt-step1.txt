@@ -44,7 +44,7 @@ ok giờ hãy code tiếp cho tôi 1 template mới để cày game với flow n
 Bước 6: Nhiệm vụ hàng ngày (asset ở thư mục Template/nth/ingame_daily)
  + Tìm ảnh 01_daily_openbutton trên màn hình, nếu k tìm thấy thì ấn esc và tìm lại, cứ thế 5 lần k được thì dừng
  + di chuyển chuột tới click vào
- + bắt đầu 1 vòng lặp nếu tìm thấy 1 trong các ảnh 02_daily_maintail hoặc 03_daily_adventure hoặc 04_daily_photograph hoặc 06_daily_mhl thì click vào ảnh đầu tiên tìm được, bắt đầu vòng lặp mới, nếu như không tìm thấy ảnh nào trong mấy ảnh trên thì tìm ảnh 05_daily_reset và di chuột click vào, bắt đầu 1 vòng lặp mới cho tới khi click đủ 4 lần thì bắt đầu 1 vòng lặp khác: tìm ảnh 07_daily_dungoan nếu k có thì tìm ảnh 05_daily_reset và click vào cho tới khi thấy 07... thì di chuột click vào, timeout search mấy ảnh trên cứ để 0.5 giây thôi và sau mỗi lần click thì delay 0.5s
+ + bắt đầu 1 vòng lặp nếu tìm thấy 1 trong các ảnh 02_daily_maintail hoặc 03_daily_adventure hoặc 04_daily_photograph hoặc 06_daily_mhl thì click vào ảnh đầu tiên tìm được, bắt đầu vòng lặp mới, nếu như không tìm thấy ảnh nào trong mấy ảnh trên thì tìm ảnh 05_daily_reset và di chuột click vào (thêm 1 điều kiện đó là hình ảnh 05_daily_reset đó không nằm trong ảnh 06_daily_mhl2 nếu nằm trong thì chọn ảnh 05_daily_reset khác), bắt đầu 1 vòng lặp mới cho tới khi click đủ 4 lần thì bắt đầu 1 vòng lặp khác: tìm ảnh 07_daily_dungoan nếu k có thì tìm ảnh 05_daily_reset và click vào cho tới khi thấy 07... thì di chuột click vào, timeout search mấy ảnh trên cứ để 0.5 giây thôi và sau mỗi lần click thì delay 0.5s
 Thêm flow lên GUI của wpf
 
 
@@ -58,6 +58,7 @@ Bước 7: Du ngoạn (asset ở thư mục Template/nth/dungoan)
 + chờ ảnh 06_dungoan_skip xuất hiện thì di chuột tới ấn vào
 + delay 0.2s và ấn space
 + vòng lặp: ấn E liên tục mỗi 0.05s cho tới khi gặp ảnh 07_dungoan_reborn thì di chuột tới ấn vào rồi lại ấn E liên tục hoặc gặp ảnh 08_dungoan_doneevent thì di chuột tới click vào sau đó chờ ảnh dungoan_closeevent thì di chuột tới click vào
++ Ấn esc, delay 1s và click vào chính giữa màn hình 2 lần, ấn F1
 + Chờ ảnh 10_dungoan_dailydone di chuuootj tới và click vào
 Thêm flow lên GUI
 
@@ -69,3 +70,6 @@ Bước 8: Đăng xuất (asset ở thư mục Template/nth/signout)
  + Ấn Space
  + đợi ảnh 04_signout_otheraccount xuất hiện với timeout cứ để 30s và click vào 2 lần, cách nhau 1s
  + tìm ảnh 05_signout_zingsignin và di chuột tới click vào 
+
+ok giờ hãy tạo 1 template và thêm vào UI là tổng hợp tất cả các bước game với thứ tự:
+Sign-In -> Chờ 10s -> Camera -> MHL -> Combat -> Map -> Daily -> Dungoan -> Signout

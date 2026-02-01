@@ -80,6 +80,7 @@ public partial class MainViewModel : ObservableObject
             Directory.CreateDirectory(_templatesFolder);
 
         // Add workflows - truyền reference để gọi command
+        Workflows.Add(new WorkflowViewModel("NTH Full Flow", this));  // Full flow đầu tiên
         Workflows.Add(new WorkflowViewModel("Open Excel Flow", this));
         Workflows.Add(new WorkflowViewModel("NTH Sign-in Flow", this));
         Workflows.Add(new WorkflowViewModel("NTH Lv26-44 Camera", this));
@@ -217,6 +218,9 @@ public partial class MainViewModel : ObservableObject
 
         switch (workflow.Name)
         {
+            case "NTH Full Flow":
+                await RunNthFullFlowAsync(workflow);
+                break;
             case "Open Excel Flow":
                 await RunOpenExcelFlowAsync(workflow);
                 break;
@@ -327,6 +331,102 @@ public partial class MainViewModel : ObservableObject
         catch
         {
             // Ignore preview errors
+        }
+    }
+
+    /// <summary>
+    /// Flow NTH Full: Tổng hợp tất cả các bước
+    /// Sign-In -> Wait 10s -> Camera -> MHL -> Combat -> Map -> Daily -> Dungoan -> Signout
+    /// </summary>
+    private async Task RunNthFullFlowAsync(WorkflowViewModel workflow)
+    {
+        if (_botCancellationTokenSource == null || _botCancellationTokenSource.IsCancellationRequested)
+        {
+            AddLog("[NTH Full Flow] Bot not running.");
+            return;
+        }
+
+        // Show input dialog on UI thread for Excel parameters
+        string? sheetName = null;
+        int startRow = 1;
+        bool dialogResult = false;
+
+        await Application.Current.Dispatcher.InvokeAsync(() =>
+        {
+            var dialog = new ExcelInputDialog
+            {
+                Owner = Application.Current.MainWindow
+            };
+
+            if (dialog.ShowDialog() == true)
+            {
+                sheetName = dialog.SheetName;
+                startRow = dialog.StartRow;
+                dialogResult = true;
+            }
+        });
+
+        if (!dialogResult)
+        {
+            AddLog("[NTH Full Flow] Cancelled by user.");
+            return;
+        }
+
+        // Minimize app to allow screen capture of game
+        Application.Current.Dispatcher.Invoke(() =>
+        {
+            Application.Current.MainWindow.WindowState = WindowState.Minimized;
+        });
+
+        await Task.Delay(500);
+
+        workflow.Status = "Running";
+        var token = _botCancellationTokenSource.Token;
+
+        try
+        {
+            AddLog("[NTH Full Flow] Starting complete game workflow...");
+            AddLog($"  Sheet: {sheetName ?? "(default)"}, Start Row: {startRow}");
+
+            await Task.Run(async () =>
+            {
+                var inputService = new InputService();
+                var fullFlowWorkflow = new NthFullFlowWorkflow(
+                    _visionService,
+                    inputService,
+                    _templatesFolder,
+                    sheetName,
+                    startRow,
+                    logger: msg => AddLog(msg));
+
+                var context = new GameContext { GameName = "NTH Game" };
+                var result = await fullFlowWorkflow.ExecuteAsync(context, token);
+
+                if (result.Success)
+                {
+                    AddLog($"[NTH Full Flow] Completed: {result.Message}");
+                    UpdateWorkflowStatus(workflow, "Ready", incrementExecution: true);
+                }
+                else
+                {
+                    AddLog($"[NTH Full Flow] Failed: {result.Message}");
+                    UpdateWorkflowStatus(workflow, "Failed");
+                }
+
+                RestoreMainWindow();
+            }, token);
+        }
+        catch (OperationCanceledException)
+        {
+            AddLog("[NTH Full Flow] Cancelled.");
+            workflow.Status = "Cancelled";
+            RestoreMainWindow();
+        }
+        catch (Exception ex)
+        {
+            AddLog($"[NTH Full Flow] Error: {ex.Message}");
+            workflow.Status = "Error";
+            RestoreMainWindow();
         }
     }
 

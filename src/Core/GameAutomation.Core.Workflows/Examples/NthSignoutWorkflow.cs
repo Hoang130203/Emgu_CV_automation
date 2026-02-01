@@ -71,25 +71,37 @@ public class NthSignoutWorkflow : IWorkflow
         {
             Log("[NTH Signout] Starting Step 8: Signout workflow...");
 
-            // ===== BUOC 8.1: An Esc =====
-            Log("[NTH Signout] Step 8.1: Pressing Escape...");
-            await _humanSim.KeyPressAsync(VirtualKeyCode.ESCAPE);
-            await Task.Delay(AfterActionDelayMs, cancellationToken);
+            // ===== BUOC 8.1 + 8.2: An Esc va tim setting (retry toi da 4 lan) =====
+            Log("[NTH Signout] Step 8.1-8.2: Pressing Escape and looking for setting button...");
+            DetectionResult? settingButton = null;
+            const int maxEscAttempts = 4;
 
-            // ===== BUOC 8.2: Tim va click setting =====
-            Log("[NTH Signout] Step 8.2: Looking for setting button...");
-            var settingButton = await WaitAndClickMultiScaleAsync(
-                SettingTemplate,
-                timeoutMs: 5000,
-                cancellationToken);
+            for (int attempt = 0; attempt < maxEscAttempts && settingButton == null; attempt++)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                Log($"[NTH Signout] Pressing Escape (attempt {attempt + 1}/{maxEscAttempts})...");
+                await _humanSim.KeyPressAsync(VirtualKeyCode.ESCAPE);
+                await Task.Delay(AfterActionDelayMs, cancellationToken);
+
+                // Tim setting button
+                settingButton = await FindMultiScaleAsync(
+                    SettingTemplate,
+                    timeoutMs: 3000,
+                    cancellationToken);
+
+                if (settingButton != null)
+                {
+                    Log("[NTH Signout] Setting button found, clicking...");
+                    await ClickAtCenterAsync(settingButton);
+                    await Task.Delay(AfterActionDelayMs, cancellationToken);
+                    break;
+                }
+            }
 
             if (settingButton == null)
             {
-                Log("[NTH Signout] Setting button not found, skipping...");
-            }
-            else
-            {
-                await Task.Delay(AfterActionDelayMs, cancellationToken);
+                Log("[NTH Signout] Setting button not found after 4 attempts, skipping...");
             }
 
             // ===== BUOC 8.3: Tim signout panel va click vao signout button ben trong =====

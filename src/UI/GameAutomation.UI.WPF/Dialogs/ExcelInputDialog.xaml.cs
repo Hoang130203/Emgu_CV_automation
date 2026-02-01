@@ -28,7 +28,7 @@ public partial class ExcelInputDialog : Window
         }
 
         SheetName = string.IsNullOrWhiteSpace(SheetNameTextBox.Text) ? null : SheetNameTextBox.Text.Trim();
-        StartRow = startRow;
+        StartRow = startRow - 1;
 
         DialogResult = true;
         Close();

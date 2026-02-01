@@ -245,12 +245,16 @@ public class NthDungoanWorkflow : IWorkflow
                 }
 
                 // An E
-                await _humanSim.KeyPressAsync(VirtualKeyCode.E);
+                for (int i = 0; i < 40; i++)
+                {
+                    await _humanSim.KeyPressAsync(VirtualKeyCode.E);
+                    await Task.Delay(80, cancellationToken);
+                }
                 ePresses++;
 
                 await Task.Delay(FastPressDelayMs, cancellationToken); // 0.05s
             }
-
+            await Task.Delay(1000, cancellationToken);
             // ===== BUOC 7.7: An Esc, click giua man hinh, an F1 =====
             Log("[NTH Dungoan] Step 7.7: Pressing Esc, clicking center, pressing F1...");
             await _humanSim.KeyPressAsync(VirtualKeyCode.ESCAPE);
@@ -276,22 +280,39 @@ public class NthDungoanWorkflow : IWorkflow
             await _humanSim.KeyPressAsync(VirtualKeyCode.F1);
             await Task.Delay(AfterActionDelayMs, cancellationToken);
 
-            // ===== BUOC 7.8: Cho dailydone va click =====
+            // ===== BUOC 7.8: Cho dailydone va click, retry F1 neu khong thay =====
             Log("[NTH Dungoan] Step 7.8: Looking for daily done button...");
-            var dailyDone = await WaitAndClickMultiScaleAsync(
-                DailyDoneTemplate,
-                timeoutMs: 10000,
-                cancellationToken);
+            bool dailyDoneFound = false;
+            const int maxDailyDoneAttempts = 5;
 
-            if (dailyDone == null)
+            for (int attempt = 0; attempt < maxDailyDoneAttempts && !dailyDoneFound; attempt++)
             {
-                Log("[NTH Dungoan] Daily done button not found...");
+                cancellationToken.ThrowIfCancellationRequested();
+
+                var dailyDone = await WaitAndClickMultiScaleAsync(
+                    DailyDoneTemplate,
+                    timeoutMs: 10000,
+                    cancellationToken);
+
+                if (dailyDone != null)
+                {
+                    dailyDoneFound = true;
+                    await Task.Delay(AfterActionDelayMs, cancellationToken);
+                    await _humanSim.KeyPressAsync(VirtualKeyCode.ESCAPE);
+                    await Task.Delay(AfterActionDelayMs, cancellationToken);
+                    Log("[NTH Dungoan] Daily done button found and clicked!");
+                }
+                else
+                {
+                    Log($"[NTH Dungoan] Daily done button not found, pressing F1 and retrying (attempt {attempt + 1}/{maxDailyDoneAttempts})...");
+                    await _humanSim.KeyPressAsync(VirtualKeyCode.F1);
+                    await Task.Delay(AfterActionDelayMs, cancellationToken);
+                }
             }
-            else
+
+            if (!dailyDoneFound)
             {
-                await Task.Delay(AfterActionDelayMs, cancellationToken);
-                await _humanSim.KeyPressAsync(VirtualKeyCode.ESCAPE);
-                await Task.Delay(AfterActionDelayMs, cancellationToken);
+                Log("[NTH Dungoan] Daily done button not found after all attempts...");
             }
 
             Log("[NTH Dungoan] Step 7 completed!");

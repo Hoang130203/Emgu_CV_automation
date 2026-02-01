@@ -36,6 +36,12 @@ public class NthLv26To44DailyWorkflow : IWorkflow
     private const string Mhl2Template = "06_daily_mhl_2.png";  // Vung can tranh khi tim reset
     private const string DungoanTemplate = "07_daily_dungoan.png";
 
+    // "Done" template file names - khi tat ca 4 anh nay xuat hien thi co the chuyen sang tim dungoan
+    private const string MainTaleDoneTemplate = "02_daily_maintale_done.png";
+    private const string AdventureDoneTemplate = "03_daily_adventure_done.png";
+    private const string PhotographDoneTemplate = "04_daily_photograph_done.png";
+    private const string MhlDoneTemplate = "06_daily_mhl_done.png";
+
     // Multi-scale settings
     private const double MatchThreshold = 0.7;
     private const double MinScale = 0.5;
@@ -116,20 +122,32 @@ public class NthLv26To44DailyWorkflow : IWorkflow
             // ===== BUOC 6.2: Vong lap tim va click cac nhiem vu =====
             Log("[NTH Daily] Step 6.2: Starting daily quest loop...");
 
-            int resetClickCount = 0;
-            const int maxResetClicks = 4;
+            int questClickCount = 0;
+            const int requiredQuestClicks = 4;
+            bool allQuestsDone = false;
 
-            // Vong lap chinh: tim cac nhiem vu hoac reset
-            while (resetClickCount < maxResetClicks)
+            // Vong lap chinh: tim cac nhiem vu hoac reset cho toi khi:
+            // - Click du 4 quest HOAC
+            // - Tim thay du 4 anh "done"
+            while (questClickCount < requiredQuestClicks && !allQuestsDone)
             {
                 cancellationToken.ThrowIfCancellationRequested();
+
+                // Kiem tra xem da co du 4 anh "done" chua
+                allQuestsDone = await CheckAllQuestsDoneAsync(cancellationToken);
+                if (allQuestsDone)
+                {
+                    Log("[NTH Daily] All 4 quest done images found! Moving to dungoan search...");
+                    break;
+                }
 
                 // Tim 1 trong cac anh nhiem vu
                 var questResult = await FindFirstQuestAsync(cancellationToken);
 
                 if (questResult != null)
                 {
-                    Log($"[NTH Daily] Found quest, clicking...");
+                    questClickCount++;
+                    Log($"[NTH Daily] Found quest, clicking... (Quest {questClickCount}/{requiredQuestClicks})");
                     await ClickAtCenterAsync(questResult);
                     await Task.Delay(AfterClickDelayMs, cancellationToken);
                     // Tiep tuc vong lap, tim nhiem vu tiep
@@ -140,17 +158,14 @@ public class NthLv26To44DailyWorkflow : IWorkflow
                 Log("[NTH Daily] No quest found, looking for reset buttons...");
                 var clickedReset = await FindAndClickAllResetButtonsAsync(cancellationToken);
 
-                if (clickedReset)
-                {
-                    resetClickCount++;
-                    Log($"[NTH Daily] Reset click count: {resetClickCount}/{maxResetClicks}");
-                }
-                else
+                if (!clickedReset)
                 {
                     Log("[NTH Daily] No reset button found, breaking loop...");
                     break;
                 }
             }
+
+            Log($"[NTH Daily] Quest click phase completed. Quests clicked: {questClickCount}, All done: {allQuestsDone}");
 
             // ===== BUOC 6.3: Tim 07_daily_dungoan =====
             Log("[NTH Daily] Step 6.3: Looking for dungoan button...");
@@ -252,7 +267,7 @@ public class NthLv26To44DailyWorkflow : IWorkflow
             var results2 = _visionService.FindTemplateMultiScale(
                 screenshot,
                 reset2Path,
-                MatchThreshold,
+                MatchThreshold + 0.1,
                 MinScale,
                 MaxScale,
                 ScaleSteps);
@@ -281,6 +296,50 @@ public class NthLv26To44DailyWorkflow : IWorkflow
         }
 
         return true;
+    }
+
+    /// <summary>
+    /// Check if all 4 quest "done" images are present on screen
+    /// Returns true if all 4 done images are found
+    /// </summary>
+    private async Task<bool> CheckAllQuestsDoneAsync(CancellationToken cancellationToken)
+    {
+        var doneTemplates = new[]
+        {
+            MainTaleDoneTemplate,
+            AdventureDoneTemplate,
+            PhotographDoneTemplate,
+            MhlDoneTemplate
+        };
+
+        int foundCount = 0;
+
+        foreach (var template in doneTemplates)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var templatePath = Path.Combine(_assetsPath, template);
+            if (!File.Exists(templatePath))
+            {
+                // Neu file khong ton tai, bo qua (co the chua tao anh done)
+                continue;
+            }
+
+            var result = await FindMultiScaleAsync(
+                template,
+                timeoutMs: 200,  // Tim nhanh
+                cancellationToken,
+                0.92);
+
+            if (result != null)
+            {
+                foundCount++;
+                Log($"[NTH Daily] Found done image: {template}");
+            }
+        }
+
+        Log($"[NTH Daily] Done images found: {foundCount}/4");
+        return foundCount >= 4;
     }
 
     /// <summary>
