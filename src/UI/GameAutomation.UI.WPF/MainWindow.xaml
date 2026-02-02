@@ -4,6 +4,7 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:GameAutomation.UI.WPF"
+        xmlns:views="clr-namespace:GameAutomation.UI.WPF.Views"
         xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
         mc:Ignorable="d"
         Title="Game Automation Bot"
@@ -620,6 +621,19 @@
                                     </ScrollViewer>
                                 </Border>
                             </Grid>
+                        </TabItem>
+
+                        <!-- Visual Designer Tab -->
+                        <TabItem Header="Designer">
+                            <TabItem.HeaderTemplate>
+                                <DataTemplate>
+                                    <StackPanel Orientation="Horizontal" Margin="8,4">
+                                        <materialDesign:PackIcon Kind="Sitemap" Width="16" Height="16" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                        <TextBlock Text="Designer" VerticalAlignment="Center" FontSize="13"/>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </TabItem.HeaderTemplate>
+                            <views:VisualDesignerView/>
                         </TabItem>
 
                         <!-- Statistics Tab -->

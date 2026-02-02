@@ -1,0 +1,511 @@
+<UserControl x:Class="GameAutomation.UI.WPF.Views.VisualDesignerView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:local="clr-namespace:GameAutomation.UI.WPF.Views"
+             xmlns:vm="clr-namespace:GameAutomation.UI.WPF.ViewModels"
+             xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+             mc:Ignorable="d"
+             d:DesignHeight="600" d:DesignWidth="1000"
+             Background="#F5F7FA">
+
+    <UserControl.DataContext>
+        <vm:VisualDesignerViewModel/>
+    </UserControl.DataContext>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Toolbar -->
+        <Border Grid.Row="0" Background="White" Padding="8" BorderBrush="#E0E0E0" BorderThickness="0,0,0,1">
+            <StackPanel Orientation="Horizontal">
+                <Button Command="{Binding NewWorkflowCommand}"
+                        Style="{StaticResource MaterialDesignFlatButton}"
+                        ToolTip="New Workflow" Margin="0,0,4,0">
+                    <StackPanel Orientation="Horizontal">
+                        <materialDesign:PackIcon Kind="FileDocumentPlus" Width="18" Height="18" VerticalAlignment="Center"/>
+                        <TextBlock Text="New" Margin="4,0,0,0" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Button>
+
+                <Button Command="{Binding OpenWorkflowCommand}"
+                        Style="{StaticResource MaterialDesignFlatButton}"
+                        ToolTip="Open Workflow" Margin="0,0,4,0">
+                    <StackPanel Orientation="Horizontal">
+                        <materialDesign:PackIcon Kind="FolderOpen" Width="18" Height="18" VerticalAlignment="Center"/>
+                        <TextBlock Text="Open" Margin="4,0,0,0" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Button>
+
+                <Button Command="{Binding SaveWorkflowCommand}"
+                        Style="{StaticResource MaterialDesignFlatButton}"
+                        ToolTip="Save Workflow" Margin="0,0,4,0">
+                    <StackPanel Orientation="Horizontal">
+                        <materialDesign:PackIcon Kind="ContentSave" Width="18" Height="18" VerticalAlignment="Center"/>
+                        <TextBlock Text="Save" Margin="4,0,0,0" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Button>
+
+                <Separator Margin="8,4"/>
+
+                <Button Command="{Binding RunWorkflowCommand}"
+                        ToolTip="Run/Stop Workflow" Margin="0,0,4,0">
+                    <Button.Style>
+                        <Style TargetType="Button" BasedOn="{StaticResource MaterialDesignFlatButton}">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsExecuting}" Value="True">
+                                    <Setter Property="Foreground" Value="#f5576c"/>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding IsExecuting}" Value="False">
+                                    <Setter Property="Foreground" Value="#56ab2f"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Button.Style>
+                    <StackPanel Orientation="Horizontal">
+                        <materialDesign:PackIcon Width="18" Height="18" VerticalAlignment="Center">
+                            <materialDesign:PackIcon.Style>
+                                <Style TargetType="materialDesign:PackIcon">
+                                    <Setter Property="Kind" Value="Play"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsExecuting}" Value="True">
+                                            <Setter Property="Kind" Value="Stop"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </materialDesign:PackIcon.Style>
+                        </materialDesign:PackIcon>
+                        <TextBlock Margin="4,0,0,0" VerticalAlignment="Center">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Text" Value="Run"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsExecuting}" Value="True">
+                                            <Setter Property="Text" Value="Stop"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                    </StackPanel>
+                </Button>
+
+                <Separator Margin="8,4"/>
+
+                <TextBlock Text="{Binding CurrentWorkflow.Name}"
+                          FontWeight="SemiBold"
+                          VerticalAlignment="Center"
+                          Margin="8,0"/>
+            </StackPanel>
+        </Border>
+
+        <!-- Main Content -->
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="200" MinWidth="150"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*" MinWidth="400"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="250" MinWidth="200"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Toolbox Panel -->
+            <Border Grid.Column="0" Background="White" Margin="8" CornerRadius="8">
+                <Border.Effect>
+                    <DropShadowEffect Color="Black" Opacity="0.08" BlurRadius="10" ShadowDepth="2"/>
+                </Border.Effect>
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Grid.Row="0" Text="Activities" FontSize="14" FontWeight="Bold"
+                              Foreground="#2D3436" Padding="12,12,12,8"/>
+
+                    <ListBox Grid.Row="1"
+                            ItemsSource="{Binding ToolboxItems}"
+                            Background="Transparent"
+                            BorderThickness="0"
+                            ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                            x:Name="ToolboxList"
+                            PreviewMouseLeftButtonDown="ToolboxList_PreviewMouseLeftButtonDown">
+                        <ListBox.GroupStyle>
+                            <GroupStyle>
+                                <GroupStyle.HeaderTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding Name}"
+                                                  FontWeight="SemiBold"
+                                                  Foreground="#636e72"
+                                                  FontSize="11"
+                                                  Padding="12,8,12,4"/>
+                                    </DataTemplate>
+                                </GroupStyle.HeaderTemplate>
+                            </GroupStyle>
+                        </ListBox.GroupStyle>
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <Border Padding="8,6" Margin="4,2" CornerRadius="6"
+                                       Background="#F8F9FA" Cursor="Hand">
+                                    <StackPanel Orientation="Horizontal">
+                                        <materialDesign:PackIcon Kind="{Binding Icon}"
+                                                                Width="16" Height="16"
+                                                                VerticalAlignment="Center"
+                                                                Foreground="#667eea"/>
+                                        <TextBlock Text="{Binding DisplayName}"
+                                                  Margin="8,0,0,0"
+                                                  VerticalAlignment="Center"
+                                                  FontSize="12"/>
+                                    </StackPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </Grid>
+            </Border>
+
+            <GridSplitter Grid.Column="1" Width="4" Background="Transparent"
+                         HorizontalAlignment="Center" VerticalAlignment="Stretch"/>
+
+            <!-- Canvas Area -->
+            <Border Grid.Column="2" Background="White" Margin="4,8" CornerRadius="8"
+                   ClipToBounds="True">
+                <Border.Effect>
+                    <DropShadowEffect Color="Black" Opacity="0.08" BlurRadius="10" ShadowDepth="2"/>
+                </Border.Effect>
+                <Grid>
+                    <!-- Grid Background Pattern -->
+                    <Canvas x:Name="WorkflowCanvas"
+                           Background="#FAFBFC"
+                           AllowDrop="True"
+                           Drop="WorkflowCanvas_Drop"
+                           DragOver="WorkflowCanvas_DragOver"
+                           MouseLeftButtonDown="WorkflowCanvas_MouseLeftButtonDown">
+
+                        <!-- Grid lines pattern -->
+                        <Canvas.Resources>
+                            <DrawingBrush x:Key="GridPattern" TileMode="Tile"
+                                         Viewport="0,0,20,20" ViewportUnits="Absolute">
+                                <DrawingBrush.Drawing>
+                                    <GeometryDrawing>
+                                        <GeometryDrawing.Geometry>
+                                            <GeometryGroup>
+                                                <LineGeometry StartPoint="0,0" EndPoint="20,0"/>
+                                                <LineGeometry StartPoint="0,0" EndPoint="0,20"/>
+                                            </GeometryGroup>
+                                        </GeometryDrawing.Geometry>
+                                        <GeometryDrawing.Pen>
+                                            <Pen Brush="#E8EAED" Thickness="0.5"/>
+                                        </GeometryDrawing.Pen>
+                                    </GeometryDrawing>
+                                </DrawingBrush.Drawing>
+                            </DrawingBrush>
+                        </Canvas.Resources>
+
+                        <Rectangle Width="{Binding ActualWidth, RelativeSource={RelativeSource AncestorType=Canvas}}"
+                                  Height="{Binding ActualHeight, RelativeSource={RelativeSource AncestorType=Canvas}}"
+                                  Fill="{StaticResource GridPattern}"/>
+
+                        <!-- Connections -->
+                        <ItemsControl ItemsSource="{Binding Connections}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <Canvas/>
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Path Stroke="#667eea" StrokeThickness="2"
+                                         StrokeDashArray="4,2" Opacity="0.8">
+                                        <Path.Data>
+                                            <PathGeometry>
+                                                <PathGeometry.Figures>
+                                                    <PathFigureCollection>
+                                                        <PathFigure StartPoint="{Binding SourceNode.X, Converter={StaticResource NodeToPointConverter}, ConverterParameter=Output}">
+                                                            <BezierSegment Point1="{Binding SourceNode, Converter={StaticResource NodeToBezierPoint1Converter}}"
+                                                                          Point2="{Binding TargetNode, Converter={StaticResource NodeToBezierPoint2Converter}}"
+                                                                          Point3="{Binding TargetNode.X, Converter={StaticResource NodeToPointConverter}, ConverterParameter=Input}"/>
+                                                        </PathFigure>
+                                                    </PathFigureCollection>
+                                                </PathGeometry.Figures>
+                                            </PathGeometry>
+                                        </Path.Data>
+                                    </Path>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                        <!-- Nodes -->
+                        <ItemsControl ItemsSource="{Binding Nodes}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <Canvas/>
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemContainerStyle>
+                                <Style TargetType="ContentPresenter">
+                                    <Setter Property="Canvas.Left" Value="{Binding X}"/>
+                                    <Setter Property="Canvas.Top" Value="{Binding Y}"/>
+                                </Style>
+                            </ItemsControl.ItemContainerStyle>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border x:Name="NodeBorder"
+                                           MinWidth="120"
+                                           CornerRadius="8"
+                                           Cursor="Hand"
+                                           MouseLeftButtonDown="Node_MouseLeftButtonDown"
+                                           MouseMove="Node_MouseMove"
+                                           MouseLeftButtonUp="Node_MouseLeftButtonUp">
+                                        <Border.Style>
+                                            <Style TargetType="Border">
+                                                <Setter Property="Background" Value="White"/>
+                                                <Setter Property="BorderBrush" Value="#E0E0E0"/>
+                                                <Setter Property="BorderThickness" Value="1"/>
+                                                <Setter Property="Effect">
+                                                    <Setter.Value>
+                                                        <DropShadowEffect Color="Black" Opacity="0.1" BlurRadius="8" ShadowDepth="2"/>
+                                                    </Setter.Value>
+                                                </Setter>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                                        <Setter Property="BorderBrush" Value="#667eea"/>
+                                                        <Setter Property="BorderThickness" Value="2"/>
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding IsExecuting}" Value="True">
+                                                        <Setter Property="BorderBrush" Value="#56ab2f"/>
+                                                        <Setter Property="BorderThickness" Value="2"/>
+                                                        <Setter Property="Background" Value="#F0FFF0"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Border.Style>
+                                        <Grid>
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="Auto"/>
+                                                <RowDefinition Height="Auto"/>
+                                            </Grid.RowDefinitions>
+
+                                            <!-- Header -->
+                                            <Border Grid.Row="0" CornerRadius="8,8,0,0" Padding="10,8">
+                                                <Border.Style>
+                                                    <Style TargetType="Border">
+                                                        <Setter Property="Background">
+                                                            <Setter.Value>
+                                                                <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                                                                    <GradientStop Color="#667eea" Offset="0"/>
+                                                                    <GradientStop Color="#764ba2" Offset="1"/>
+                                                                </LinearGradientBrush>
+                                                            </Setter.Value>
+                                                        </Setter>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding ActivityType}" Value="Start">
+                                                                <Setter Property="Background">
+                                                                    <Setter.Value>
+                                                                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                                                                            <GradientStop Color="#56ab2f" Offset="0"/>
+                                                                            <GradientStop Color="#a8e063" Offset="1"/>
+                                                                        </LinearGradientBrush>
+                                                                    </Setter.Value>
+                                                                </Setter>
+                                                            </DataTrigger>
+                                                            <DataTrigger Binding="{Binding ActivityType}" Value="End">
+                                                                <Setter Property="Background">
+                                                                    <Setter.Value>
+                                                                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                                                                            <GradientStop Color="#f093fb" Offset="0"/>
+                                                                            <GradientStop Color="#f5576c" Offset="1"/>
+                                                                        </LinearGradientBrush>
+                                                                    </Setter.Value>
+                                                                </Setter>
+                                                            </DataTrigger>
+                                                            <DataTrigger Binding="{Binding ActivityType}" Value="Condition">
+                                                                <Setter Property="Background">
+                                                                    <Setter.Value>
+                                                                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                                                                            <GradientStop Color="#f093fb" Offset="0"/>
+                                                                            <GradientStop Color="#667eea" Offset="1"/>
+                                                                        </LinearGradientBrush>
+                                                                    </Setter.Value>
+                                                                </Setter>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </Border.Style>
+                                                <StackPanel Orientation="Horizontal">
+                                                    <materialDesign:PackIcon Kind="{Binding Icon}"
+                                                                            Width="16" Height="16"
+                                                                            Foreground="White"
+                                                                            VerticalAlignment="Center"/>
+                                                    <TextBlock Text="{Binding DisplayName}"
+                                                              Foreground="White"
+                                                              FontWeight="SemiBold"
+                                                              FontSize="12"
+                                                              Margin="6,0,0,0"
+                                                              VerticalAlignment="Center"/>
+                                                </StackPanel>
+                                            </Border>
+
+                                            <!-- Ports -->
+                                            <Grid Grid.Row="1" Margin="0,4,0,8">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                </Grid.ColumnDefinitions>
+
+                                                <!-- Input Ports -->
+                                                <ItemsControl Grid.Column="0" ItemsSource="{Binding InputPorts}" Margin="4,0">
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate>
+                                                            <StackPanel Orientation="Horizontal" Margin="0,2">
+                                                                <Ellipse Width="10" Height="10"
+                                                                        Fill="#4facfe"
+                                                                        Stroke="White"
+                                                                        StrokeThickness="1"
+                                                                        Margin="-5,0,4,0"/>
+                                                                <TextBlock Text="{Binding Name}"
+                                                                          FontSize="10"
+                                                                          Foreground="#636e72"/>
+                                                            </StackPanel>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+
+                                                <!-- Output Ports -->
+                                                <ItemsControl Grid.Column="1" ItemsSource="{Binding OutputPorts}"
+                                                             HorizontalAlignment="Right" Margin="0,0,4,0">
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate>
+                                                            <StackPanel Orientation="Horizontal" Margin="0,2" HorizontalAlignment="Right">
+                                                                <TextBlock Text="{Binding Name}"
+                                                                          FontSize="10"
+                                                                          Foreground="#636e72"/>
+                                                                <Ellipse Width="10" Height="10"
+                                                                        Fill="#56ab2f"
+                                                                        Stroke="White"
+                                                                        StrokeThickness="1"
+                                                                        Margin="4,0,-5,0"/>
+                                                            </StackPanel>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                            </Grid>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </Canvas>
+
+                    <!-- Empty state -->
+                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center"
+                               Visibility="{Binding Nodes.Count, Converter={StaticResource CountToVisibilityConverter}}">
+                        <materialDesign:PackIcon Kind="Sitemap" Width="48" Height="48"
+                                                Foreground="#b2bec3" HorizontalAlignment="Center"/>
+                        <TextBlock Text="Drag activities from the toolbox"
+                                  Foreground="#636e72" FontSize="14"
+                                  HorizontalAlignment="Center" Margin="0,12,0,0"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <GridSplitter Grid.Column="3" Width="4" Background="Transparent"
+                         HorizontalAlignment="Center" VerticalAlignment="Stretch"/>
+
+            <!-- Properties Panel -->
+            <Border Grid.Column="4" Background="White" Margin="8" CornerRadius="8">
+                <Border.Effect>
+                    <DropShadowEffect Color="Black" Opacity="0.08" BlurRadius="10" ShadowDepth="2"/>
+                </Border.Effect>
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="150"/>
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Grid.Row="0" Text="Properties" FontSize="14" FontWeight="Bold"
+                              Foreground="#2D3436" Padding="12"/>
+
+                    <!-- Properties Editor -->
+                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                        <StackPanel Margin="12,0,12,12">
+                            <TextBlock Text="Select a node to edit properties"
+                                      Foreground="#b2bec3" FontSize="12"
+                                      Visibility="{Binding SelectedNode, Converter={StaticResource NullToVisibleConverter}}"/>
+
+                            <StackPanel Visibility="{Binding SelectedNode, Converter={StaticResource NullToCollapsedConverter}}">
+                                <TextBlock Text="Node Name" FontSize="11" Foreground="#636e72" Margin="0,0,0,4"/>
+                                <TextBox Text="{Binding SelectedNode.DisplayName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                        Padding="8,6" Margin="0,0,0,12"/>
+
+                                <ItemsControl ItemsSource="{Binding SelectedNode.PropertyDefinitions}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <StackPanel Margin="0,0,0,12">
+                                                <TextBlock Text="{Binding DisplayName}"
+                                                          FontSize="11" Foreground="#636e72" Margin="0,0,0,4"/>
+                                                <TextBox Tag="{Binding Name}"
+                                                        Padding="8,6"
+                                                        TextChanged="PropertyTextBox_TextChanged"/>
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                        </StackPanel>
+                    </ScrollViewer>
+
+                    <TextBlock Grid.Row="2" Text="Execution Log" FontSize="14" FontWeight="Bold"
+                              Foreground="#2D3436" Padding="12,12,12,8"/>
+
+                    <!-- Execution Log -->
+                    <Border Grid.Row="3" Background="#1e1e1e" CornerRadius="0,0,8,8" Margin="0">
+                        <ScrollViewer VerticalScrollBarVisibility="Auto">
+                            <TextBox IsReadOnly="True"
+                                    Text="{Binding ExecutionLog}"
+                                    TextWrapping="Wrap"
+                                    FontFamily="Consolas"
+                                    FontSize="10"
+                                    Background="Transparent"
+                                    Foreground="#00f2fe"
+                                    BorderThickness="0"
+                                    Padding="8"/>
+                        </ScrollViewer>
+                    </Border>
+                </Grid>
+            </Border>
+        </Grid>
+
+        <!-- Status Bar -->
+        <Border Grid.Row="2" Background="White" Padding="12,8" BorderBrush="#E0E0E0" BorderThickness="0,1,0,0">
+            <DockPanel>
+                <StackPanel Orientation="Horizontal" DockPanel.Dock="Left">
+                    <Ellipse Width="8" Height="8" Margin="0,0,8,0">
+                        <Ellipse.Style>
+                            <Style TargetType="Ellipse">
+                                <Setter Property="Fill" Value="#00b894"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsExecuting}" Value="True">
+                                        <Setter Property="Fill" Value="#f5576c"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Ellipse.Style>
+                    </Ellipse>
+                    <TextBlock Text="{Binding StatusMessage}" FontSize="12" VerticalAlignment="Center"/>
+                </StackPanel>
+                <TextBlock DockPanel.Dock="Right" HorizontalAlignment="Right" VerticalAlignment="Center">
+                    <Run Text="Nodes: "/><Run Text="{Binding Nodes.Count, Mode=OneWay}" FontWeight="SemiBold"/>
+                    <Run Text="  |  Connections: "/><Run Text="{Binding Connections.Count, Mode=OneWay}" FontWeight="SemiBold"/>
+                </TextBlock>
+            </DockPanel>
+        </Border>
+    </Grid>
+</UserControl>
