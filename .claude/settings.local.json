@@ -1,0 +1,28 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dotnet new:*)",
+      "Bash(mkdir:*)",
+      "Bash(dotnet sln add:*)",
+      "Bash(dotnet sln:*)",
+      "Bash(dotnet add:*)",
+      "Bash(dotnet build:*)",
+      "Bash(dotnet run:*)",
+      "Bash(dotnet publish:*)",
+      "Bash(dir \"C:\\\\Claude\\\\Games\\\\AutoGame\\\\EmguCvNTH\\\\publish\" /b)",
+      "Bash(tree:*)",
+      "Bash(dir /B /AD \"C:\\\\Claude\\\\Games\\\\AutoGame\\\\EmguCvNTH\\\\src\\\\UI\\\\GameAutomation.UI.WPF\")",
+      "Bash(ls -la \"C:\\\\Claude\\\\Games\\\\AutoGame\\\\EmguCvNTH\\\\src\\\\UI\\\\GameAutomation.UI.WPF\"\" | grep -v \"^d \")",
+      "Bash(dir /s /b \"C:\\\\Claude\\\\Games\\\\AutoGame\\\\EmguCvNTH\\\\src\")",
+      "Bash(taskkill:*)",
+      "Bash(xcopy:*)",
+      "Bash(robocopy:*)",
+      "Bash(echo:*)",
+      "Bash(powershell -Command:*)",
+      "Bash(dir:*)",
+      "Bash(ls -la \"C:\\\\Claude\\\\Games\\\\AutoGame\\\\EmguCvNTH\\\\src\\\\Core\"\" | grep -E \".csproj)",
+      "Bash(^d \")",
+      "Bash(find:*)"
+    ]
+  }
+}
