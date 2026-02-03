@@ -244,7 +244,7 @@
                         </StackPanel>
 
                         <!-- Screen Capture Interval -->
-                        <StackPanel>
+                        <StackPanel Margin="0,0,0,16">
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*"/>
@@ -259,6 +259,20 @@
                                    TickFrequency="50" IsSnapToTickEnabled="True"
                                    Margin="0,8,0,0"/>
                         </StackPanel>
+
+                        <!-- Use Region Search Toggle -->
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0">
+                                <TextBlock Text="Use Region Search" FontSize="14" FontWeight="SemiBold" Foreground="#2D3436"/>
+                                <TextBlock Text="Limit search area using JSON config or hardcoded regions" FontSize="11" Foreground="#636e72" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <ToggleButton Grid.Column="1" Style="{StaticResource ModernToggle}"
+                                         IsChecked="{Binding UseRegionSearch}" VerticalAlignment="Center"/>
+                        </Grid>
                     </StackPanel>
                 </Border>
 

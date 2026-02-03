@@ -402,6 +402,47 @@
                                 </StackPanel>
                             </Button>
 
+                            <Button Command="{Binding OpenRegionEditorCommand}"
+                                    Margin="0,0,0,8"
+                                    Height="44"
+                                    Cursor="Hand"
+                                    Background="Transparent"
+                                    BorderBrush="#e17055"
+                                    BorderThickness="2"
+                                    FontWeight="SemiBold">
+                                <Button.Style>
+                                    <Style TargetType="Button">
+                                        <Setter Property="Template">
+                                            <Setter.Value>
+                                                <ControlTemplate TargetType="Button">
+                                                    <Border Background="{TemplateBinding Background}"
+                                                            BorderBrush="{TemplateBinding BorderBrush}"
+                                                            BorderThickness="{TemplateBinding BorderThickness}"
+                                                            CornerRadius="10"
+                                                            Padding="12,0">
+                                                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                    </Border>
+                                                </ControlTemplate>
+                                            </Setter.Value>
+                                        </Setter>
+                                        <Setter Property="Foreground" Value="#e17055"/>
+                                        <Style.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter Property="Background">
+                                                    <Setter.Value>
+                                                        <SolidColorBrush Color="#e17055" Opacity="0.1"/>
+                                                    </Setter.Value>
+                                                </Setter>
+                                            </Trigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Button.Style>
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                    <materialDesign:PackIcon Kind="MapMarkerRadius" Width="16" Height="16" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                    <TextBlock Text="Region Editor" FontSize="12" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Button>
+
                         </StackPanel>
                     </ScrollViewer>
                 </Border>

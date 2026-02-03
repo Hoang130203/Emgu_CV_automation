@@ -395,6 +395,7 @@ public class NthLv26To44DailyWorkflow : IWorkflow
         CancellationToken cancellationToken = default,
         double? threshold = null)
     {
+        var stopwatch = System.Diagnostics.Stopwatch.StartNew();
         var templatePath = Path.Combine(_assetsPath, templateFileName);
         if (!File.Exists(templatePath))
         {
@@ -432,8 +433,10 @@ public class NthLv26To44DailyWorkflow : IWorkflow
                 if (filteredResults.Count > 0)
                 {
                     var best = GetBestMatch(filteredResults, templatePath);
+                    stopwatch.Stop();
                     var regionInfo = searchRegion != null ? $" [ROI: {searchRegion}]" : " [Full]";
                     Log($"[NTH Daily] Found {templateFileName} - Confidence: {best.Confidence:P1} at ({best.X}, {best.Y}){regionInfo}");
+                    Log($"[TIMING] FindTemplate {templateFileName}: {stopwatch.ElapsedMilliseconds}ms (found: true)");
                     return best;
                 }
             }
@@ -441,6 +444,8 @@ public class NthLv26To44DailyWorkflow : IWorkflow
             await Task.Delay(50, cancellationToken);
         }
 
+        stopwatch.Stop();
+        Log($"[TIMING] FindTemplate {templateFileName}: {stopwatch.ElapsedMilliseconds}ms (found: false)");
         return null;
     }
 

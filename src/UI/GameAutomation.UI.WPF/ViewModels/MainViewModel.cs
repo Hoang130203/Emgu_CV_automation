@@ -2,6 +2,8 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using GameAutomation.Core.Models.Configuration;
 using GameAutomation.Core.Models.GameState;
+using GameAutomation.Core.Models.Vision;
+using GameAutomation.Core.Services.Configuration;
 using GameAutomation.Core.Services.Input;
 using GameAutomation.Core.Services.Vision;
 using GameAutomation.Core.Workflows.Examples;
@@ -26,6 +28,7 @@ public partial class MainViewModel : ObservableObject
     private const int MaxScreenshots = 3;
     private CancellationTokenSource? _botCancellationTokenSource;
     private readonly BotConfiguration _configuration;
+    private readonly RegionConfigService _regionConfigService;
 
     [ObservableProperty]
     private string _botStatus = "Stopped";
@@ -69,6 +72,7 @@ public partial class MainViewModel : ObservableObject
     {
         _visionService = new VisionService();
         _configuration = new BotConfiguration();
+        _regionConfigService = new RegionConfigService();
 
         var baseDir = AppDomain.CurrentDomain.BaseDirectory;
         _screenshotsFolder = Path.Combine(baseDir, "Screenshots");
@@ -78,6 +82,9 @@ public partial class MainViewModel : ObservableObject
             Directory.CreateDirectory(_screenshotsFolder);
         if (!Directory.Exists(_templatesFolder))
             Directory.CreateDirectory(_templatesFolder);
+
+        // Initialize region config
+        InitializeRegionConfigAsync();
 
         // Add workflows - truyền reference để gọi command
         Workflows.Add(new WorkflowViewModel("NTH Full Flow", this));  // Full flow đầu tiên
@@ -97,6 +104,24 @@ public partial class MainViewModel : ObservableObject
         AddLog("Waiting for user input...");
     }
 
+    private async void InitializeRegionConfigAsync()
+    {
+        try
+        {
+            await _regionConfigService.LoadAsync();
+            // Note: We can't directly access RegionConfig from service, but GetAllKeys works
+            var customRegionCount = _regionConfigService.GetAllKeys().Count;
+            if (customRegionCount > 0)
+            {
+                AddLog($"Loaded {customRegionCount} custom regions from config.");
+            }
+        }
+        catch (Exception ex)
+        {
+            AddLog($"Warning: Failed to load region config: {ex.Message}");
+        }
+    }
+
     [RelayCommand]
     private void OpenSettings()
     {
@@ -113,6 +138,18 @@ public partial class MainViewModel : ObservableObject
         }
     }
 
+    [RelayCommand]
+    private void OpenRegionEditor()
+    {
+        var regionEditorWindow = new RegionEditorWindow(_regionConfigService, _templatesFolder)
+        {
+            Owner = Application.Current.MainWindow
+        };
+
+        regionEditorWindow.ShowDialog();
+        AddLog("Region Editor closed.");
+    }
+
     private void ApplySettings()
     {
         // Update AI provider display
@@ -127,6 +164,9 @@ public partial class MainViewModel : ObservableObject
             _configuration.MinMatchCount,
             _configuration.FeatureMatchRatio);
 
+        // Apply region search setting
+        ImageResourceRegistry.SetUseRegionSearch(_configuration.UseRegionSearch);
+
         AddLog($"Feature Matching: {(_configuration.UseFeatureMatching ? "Enabled" : "Disabled")}");
         if (_configuration.UseFeatureMatching)
         {
@@ -134,6 +174,7 @@ public partial class MainViewModel : ObservableObject
             AddLog($"  Min Matches: {_configuration.MinMatchCount}");
             AddLog($"  Ratio Threshold: {_configuration.FeatureMatchRatio:F2}");
         }
+        AddLog($"Region Search: {(_configuration.UseRegionSearch ? "Enabled" : "Disabled")}");
     }
 
     [RelayCommand]

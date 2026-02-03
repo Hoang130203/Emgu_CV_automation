@@ -1,3 +1,5 @@
+using GameAutomation.Core.Models.Configuration;
+
 namespace GameAutomation.Core.Models.Vision;
 
 /// <summary>
@@ -9,6 +11,38 @@ public static class ImageResourceRegistry
     // Common search regions - reusable across multiple resources
     private static readonly SearchRegion DailyQuestRegion = new(1.0 / 4, 1.0 / 2, 9.5 / 10, 4.5 / 5);
     private static readonly SearchRegion FullScreenRegion = SearchRegion.FullScreen;
+
+    // Runtime region config (loaded from JSON) - set via SetRegionConfig
+    private static RegionConfig? _regionConfig;
+    private static bool _useRegionSearch = true;
+
+    /// <summary>
+    /// Set the runtime region config (call on app startup)
+    /// </summary>
+    public static void SetRegionConfig(RegionConfig? config) => _regionConfig = config;
+
+    /// <summary>
+    /// Set whether to use region search (from BotConfiguration.UseRegionSearch)
+    /// </summary>
+    public static void SetUseRegionSearch(bool useRegion) => _useRegionSearch = useRegion;
+
+    /// <summary>
+    /// Get effective region for a template, checking JSON config first
+    /// Priority: UseRegionSearch=false → null | JSON config → hardcoded → null
+    /// </summary>
+    public static SearchRegion? GetEffectiveRegion(string key)
+    {
+        // If region search is disabled, return null (full screen)
+        if (!_useRegionSearch)
+            return null;
+
+        // Check JSON config first (priority)
+        if (_regionConfig?.Regions.TryGetValue(key, out var entry) == true && entry.Enabled)
+            return entry.ToSearchRegion();
+
+        // Fall back to hardcoded registry
+        return Resources.TryGetValue(key, out var resource) ? resource.Region : null;
+    }
 
     /// <summary>
     /// All registered image resources keyed by their identifier
