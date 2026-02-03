@@ -8,6 +8,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using static GameAutomation.Core.Models.Vision.ImageResourceRegistry;
 
 namespace GameAutomation.Core.Workflows.Examples;
 
@@ -238,6 +239,7 @@ public class NthLv26To44DailyWorkflow : IWorkflow
     /// <summary>
     /// Find and click all reset buttons (05_daily_reset and 05_daily_reset_2)
     /// Returns true if at least one reset was clicked
+    /// Uses ROI optimization for faster search
     /// </summary>
     private async Task<bool> FindAndClickAllResetButtonsAsync(CancellationToken cancellationToken)
     {
@@ -245,13 +247,17 @@ public class NthLv26To44DailyWorkflow : IWorkflow
 
         using var screenshot = _visionService.CaptureScreen();
 
+        // Get search region for reset buttons (05_ prefix)
+        var resetRegion = GetRegionByPrefix(ResetTemplate, "daily");
+
         // Tim 05_daily_reset
         var resetPath = Path.Combine(_assetsPath, ResetTemplate);
         if (File.Exists(resetPath))
         {
-            var results = _visionService.FindTemplateMultiScale(
+            var results = _visionService.FindTemplateMultiScaleInRegion(
                 screenshot,
                 resetPath,
+                resetRegion,
                 MatchThreshold + 0.05,
                 MinScale,
                 MaxScale,
@@ -264,9 +270,10 @@ public class NthLv26To44DailyWorkflow : IWorkflow
         var reset2Path = Path.Combine(_assetsPath, Reset2Template);
         if (File.Exists(reset2Path))
         {
-            var results2 = _visionService.FindTemplateMultiScale(
+            var results2 = _visionService.FindTemplateMultiScaleInRegion(
                 screenshot,
                 reset2Path,
+                resetRegion,
                 MatchThreshold + 0.05,
                 MinScale,
                 MaxScale,
@@ -379,7 +386,7 @@ public class NthLv26To44DailyWorkflow : IWorkflow
     }
 
     /// <summary>
-    /// Find template using multi-scale matching
+    /// Find template using multi-scale matching with ROI optimization
     /// Returns best match (highest confidence, closest to original size)
     /// </summary>
     private async Task<DetectionResult?> FindMultiScaleAsync(
@@ -398,14 +405,21 @@ public class NthLv26To44DailyWorkflow : IWorkflow
         var actualThreshold = threshold ?? MatchThreshold;
         var endTime = DateTime.Now.AddMilliseconds(timeoutMs);
 
+        // Get search region from registry (auto-detect based on filename prefix)
+        var searchRegion = GetRegionByFileName(templateFileName)
+            ?? GetRegionByPrefix(templateFileName, "daily");
+
         while (DateTime.Now < endTime)
         {
             cancellationToken.ThrowIfCancellationRequested();
 
             using var screenshot = _visionService.CaptureScreen();
-            var results = _visionService.FindTemplateMultiScale(
+
+            // Use ROI-based search if region is defined, otherwise full screen
+            var results = _visionService.FindTemplateMultiScaleInRegion(
                 screenshot,
                 templatePath,
+                searchRegion,
                 actualThreshold,
                 MinScale,
                 MaxScale,
@@ -418,7 +432,8 @@ public class NthLv26To44DailyWorkflow : IWorkflow
                 if (filteredResults.Count > 0)
                 {
                     var best = GetBestMatch(filteredResults, templatePath);
-                    Log($"[NTH Daily] Found {templateFileName} - Confidence: {best.Confidence:P1} at ({best.X}, {best.Y})");
+                    var regionInfo = searchRegion != null ? $" [ROI: {searchRegion}]" : " [Full]";
+                    Log($"[NTH Daily] Found {templateFileName} - Confidence: {best.Confidence:P1} at ({best.X}, {best.Y}){regionInfo}");
                     return best;
                 }
             }
