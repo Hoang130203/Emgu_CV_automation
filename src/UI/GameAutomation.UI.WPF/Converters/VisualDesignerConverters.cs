@@ -100,3 +100,66 @@ public class InverseBoolToVisibilityConverter : IValueConverter
         throw new NotImplementedException();
     }
 }
+
+/// <summary>
+/// Converts a node to a Point for connection endpoints
+/// Parameter: "Input" for input port center, "Output" for output port center
+/// </summary>
+public class NodeToPointConverter : IValueConverter
+{
+    private const double NodeWidth = 120;
+    private const double NodeHeaderHeight = 32;
+
+    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        if (value is double x)
+        {
+            // For X coordinate binding, return a dummy point - actual binding needs multi-value
+            return new System.Windows.Point(x, 0);
+        }
+        return new System.Windows.Point(0, 0);
+    }
+
+    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        throw new NotImplementedException();
+    }
+}
+
+/// <summary>
+/// Converts source node to bezier control point 1 (curves out to the right)
+/// </summary>
+public class NodeToBezierPoint1Converter : IValueConverter
+{
+    private const double ControlPointOffset = 80;
+
+    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        // Return a default point - actual implementation needs multi-binding
+        return new System.Windows.Point(0, 0);
+    }
+
+    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        throw new NotImplementedException();
+    }
+}
+
+/// <summary>
+/// Converts target node to bezier control point 2 (curves in from the left)
+/// </summary>
+public class NodeToBezierPoint2Converter : IValueConverter
+{
+    private const double ControlPointOffset = 80;
+
+    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        // Return a default point - actual implementation needs multi-binding
+        return new System.Windows.Point(0, 0);
+    }
+
+    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        throw new NotImplementedException();
+    }
+}

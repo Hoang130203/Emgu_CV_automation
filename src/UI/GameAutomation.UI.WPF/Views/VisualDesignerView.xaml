@@ -8,7 +8,9 @@
              xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
              mc:Ignorable="d"
              d:DesignHeight="600" d:DesignWidth="1000"
-             Background="#F5F7FA">
+             Background="#F5F7FA"
+             Focusable="True"
+             KeyDown="UserControl_KeyDown">
 
     <UserControl.DataContext>
         <vm:VisualDesignerViewModel/>
@@ -185,7 +187,13 @@
                            AllowDrop="True"
                            Drop="WorkflowCanvas_Drop"
                            DragOver="WorkflowCanvas_DragOver"
-                           MouseLeftButtonDown="WorkflowCanvas_MouseLeftButtonDown">
+                           MouseLeftButtonDown="WorkflowCanvas_MouseLeftButtonDown"
+                           MouseMove="WorkflowCanvas_MouseMove"
+                           MouseLeftButtonUp="WorkflowCanvas_MouseLeftButtonUp"
+                           MouseWheel="Canvas_MouseWheel"
+                           MouseRightButtonDown="Canvas_MouseRightButtonDown"
+                           MouseRightButtonUp="Canvas_MouseRightButtonUp"
+                           Focusable="True">
 
                         <!-- Grid lines pattern -->
                         <Canvas.Resources>
@@ -211,7 +219,7 @@
                                   Height="{Binding ActualHeight, RelativeSource={RelativeSource AncestorType=Canvas}}"
                                   Fill="{StaticResource GridPattern}"/>
 
-                        <!-- Connections -->
+                        <!-- Connections - Simple line rendering -->
                         <ItemsControl ItemsSource="{Binding Connections}">
                             <ItemsControl.ItemsPanel>
                                 <ItemsPanelTemplate>
@@ -220,22 +228,16 @@
                             </ItemsControl.ItemsPanel>
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
-                                    <Path Stroke="#667eea" StrokeThickness="2"
-                                         StrokeDashArray="4,2" Opacity="0.8">
-                                        <Path.Data>
-                                            <PathGeometry>
-                                                <PathGeometry.Figures>
-                                                    <PathFigureCollection>
-                                                        <PathFigure StartPoint="{Binding SourceNode.X, Converter={StaticResource NodeToPointConverter}, ConverterParameter=Output}">
-                                                            <BezierSegment Point1="{Binding SourceNode, Converter={StaticResource NodeToBezierPoint1Converter}}"
-                                                                          Point2="{Binding TargetNode, Converter={StaticResource NodeToBezierPoint2Converter}}"
-                                                                          Point3="{Binding TargetNode.X, Converter={StaticResource NodeToPointConverter}, ConverterParameter=Input}"/>
-                                                        </PathFigure>
-                                                    </PathFigureCollection>
-                                                </PathGeometry.Figures>
-                                            </PathGeometry>
-                                        </Path.Data>
-                                    </Path>
+                                    <Line Stroke="#667eea" StrokeThickness="2"
+                                         StrokeDashArray="4,2" Opacity="0.8"
+                                         X1="{Binding SourceNode.X}"
+                                         Y1="{Binding SourceNode.Y}"
+                                         X2="{Binding TargetNode.X}"
+                                         Y2="{Binding TargetNode.Y}">
+                                        <Line.RenderTransform>
+                                            <TranslateTransform X="60" Y="20"/>
+                                        </Line.RenderTransform>
+                                    </Line>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
@@ -358,16 +360,20 @@
                                                     <ColumnDefinition Width="*"/>
                                                 </Grid.ColumnDefinitions>
 
-                                                <!-- Input Ports -->
+                                                <!-- Input Ports (Drop targets) -->
                                                 <ItemsControl Grid.Column="0" ItemsSource="{Binding InputPorts}" Margin="4,0">
                                                     <ItemsControl.ItemTemplate>
                                                         <DataTemplate>
                                                             <StackPanel Orientation="Horizontal" Margin="0,2">
-                                                                <Ellipse Width="10" Height="10"
+                                                                <Ellipse Width="12" Height="12"
                                                                         Fill="#4facfe"
                                                                         Stroke="White"
-                                                                        StrokeThickness="1"
-                                                                        Margin="-5,0,4,0"/>
+                                                                        StrokeThickness="2"
+                                                                        Margin="-6,0,4,0"
+                                                                        Cursor="Hand"
+                                                                        ToolTip="Drop connection here"
+                                                                        MouseLeftButtonUp="InputPort_MouseLeftButtonUp"
+                                                                        Tag="{Binding}"/>
                                                                 <TextBlock Text="{Binding Name}"
                                                                           FontSize="10"
                                                                           Foreground="#636e72"/>
@@ -376,7 +382,7 @@
                                                     </ItemsControl.ItemTemplate>
                                                 </ItemsControl>
 
-                                                <!-- Output Ports -->
+                                                <!-- Output Ports (Drag sources) -->
                                                 <ItemsControl Grid.Column="1" ItemsSource="{Binding OutputPorts}"
                                                              HorizontalAlignment="Right" Margin="0,0,4,0">
                                                     <ItemsControl.ItemTemplate>
@@ -385,11 +391,15 @@
                                                                 <TextBlock Text="{Binding Name}"
                                                                           FontSize="10"
                                                                           Foreground="#636e72"/>
-                                                                <Ellipse Width="10" Height="10"
+                                                                <Ellipse Width="12" Height="12"
                                                                         Fill="#56ab2f"
                                                                         Stroke="White"
-                                                                        StrokeThickness="1"
-                                                                        Margin="4,0,-5,0"/>
+                                                                        StrokeThickness="2"
+                                                                        Margin="4,0,-6,0"
+                                                                        Cursor="Hand"
+                                                                        ToolTip="Drag to connect"
+                                                                        MouseLeftButtonDown="OutputPort_MouseLeftButtonDown"
+                                                                        Tag="{Binding}"/>
                                                             </StackPanel>
                                                         </DataTemplate>
                                                     </ItemsControl.ItemTemplate>
@@ -453,6 +463,7 @@
                                                           FontSize="11" Foreground="#636e72" Margin="0,0,0,4"/>
                                                 <TextBox Tag="{Binding Name}"
                                                         Padding="8,6"
+                                                        Loaded="PropertyTextBox_Loaded"
                                                         TextChanged="PropertyTextBox_TextChanged"/>
                                             </StackPanel>
                                         </DataTemplate>

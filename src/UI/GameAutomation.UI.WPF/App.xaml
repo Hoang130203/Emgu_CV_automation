@@ -18,6 +18,9 @@
             <converters:CountToVisibilityConverter x:Key="CountToVisibilityConverter"/>
             <converters:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
             <converters:InverseBoolToVisibilityConverter x:Key="InverseBoolToVisibilityConverter"/>
+            <converters:NodeToPointConverter x:Key="NodeToPointConverter"/>
+            <converters:NodeToBezierPoint1Converter x:Key="NodeToBezierPoint1Converter"/>
+            <converters:NodeToBezierPoint2Converter x:Key="NodeToBezierPoint2Converter"/>
 
             <!-- Gradient Brushes -->
             <LinearGradientBrush x:Key="PrimaryGradient" StartPoint="0,0" EndPoint="1,1">

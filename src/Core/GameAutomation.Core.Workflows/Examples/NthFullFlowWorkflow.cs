@@ -12,6 +12,7 @@ namespace GameAutomation.Core.Workflows.Examples;
 
 /// <summary>
 /// NTH Game Full Flow Workflow
+/// 
 /// Combines all steps: Sign-In -> Camera -> MHL -> Combat -> Map -> Daily -> Dungoan -> Signout
 /// </summary>
 public class NthFullFlowWorkflow : IWorkflow

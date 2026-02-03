@@ -434,7 +434,11 @@ public partial class NodeViewModel : ObservableObject
     [ObservableProperty]
     private string? _lastResult;
 
-    public string DisplayName => Node.DisplayName;
+    public string DisplayName
+    {
+        get => Node.DisplayName;
+        set { Node.DisplayName = value; OnPropertyChanged(); }
+    }
     public string ActivityType => Node.ActivityType;
     public string Icon => Activity?.Icon ?? "Help";
     public double X
