@@ -169,12 +169,6 @@ public class NthDungoanWorkflow : IWorkflow
                     await ClickAtCenterAsync(nameEvent);
                     nameEventClicks++;
                 }
-                else
-                {
-                    // Khong thay ca 2 anh, thoat vong lap
-                    Log("[NTH Dungoan] Neither name event nor go dungeon found, moving on...");
-                    break;
-                }
 
                 await Task.Delay(HalfSecondDelayMs, cancellationToken); // 0.5s
             }

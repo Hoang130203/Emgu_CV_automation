@@ -89,7 +89,7 @@ public class NthLv26To44MapWorkflow : IWorkflow
 
             if (zoomButton != null)
             {
-                for (int i = 0; i < 3; i++)
+                for (int i = 0; i < 5; i++)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
 
@@ -178,11 +178,11 @@ public class NthLv26To44MapWorkflow : IWorkflow
 
                     await _humanSim.MoveMouseAsync(undoCenterX, undoCenterY);
                     await _humanSim.LeftClickAsync();
-                    await Task.Delay(ShortDelayMs, cancellationToken);
+                    await Task.Delay(50, cancellationToken);
                     await _humanSim.LeftClickAsync();
-                    await Task.Delay(ShortDelayMs, cancellationToken);
+                    await Task.Delay(50, cancellationToken);
                     await _humanSim.LeftClickAsync();
-                    await Task.Delay(ShortDelayMs, cancellationToken);
+                    await Task.Delay(50, cancellationToken);
                 }
                 else
                 {
