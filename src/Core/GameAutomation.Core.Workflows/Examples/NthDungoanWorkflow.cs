@@ -8,6 +8,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using static GameAutomation.Core.Models.Vision.ImageResourceRegistry;
 
 namespace GameAutomation.Core.Workflows.Examples;
 
@@ -349,7 +350,7 @@ public class NthDungoanWorkflow : IWorkflow
     #region Private Methods
 
     /// <summary>
-    /// Find template using multi-scale matching
+    /// Find template using multi-scale matching with optional ROI
     /// Returns best match (highest confidence, closest to original size)
     /// </summary>
     private async Task<DetectionResult?> FindMultiScaleAsync(
@@ -368,14 +369,19 @@ public class NthDungoanWorkflow : IWorkflow
         var actualThreshold = threshold ?? MatchThreshold;
         var endTime = DateTime.Now.AddMilliseconds(timeoutMs);
 
+        // Get search region using GetEffectiveRegion (respects UseRegionSearch setting)
+        var templateKey = $"dungoan/{Path.GetFileNameWithoutExtension(templateFileName)}";
+        var searchRegion = GetEffectiveRegion(templateKey);
+
         while (DateTime.Now < endTime)
         {
             cancellationToken.ThrowIfCancellationRequested();
 
             using var screenshot = _visionService.CaptureScreen();
-            var results = _visionService.FindTemplateMultiScale(
+            var results = _visionService.FindTemplateMultiScaleInRegion(
                 screenshot,
                 templatePath,
+                searchRegion,
                 actualThreshold,
                 MinScale,
                 MaxScale,
@@ -388,7 +394,8 @@ public class NthDungoanWorkflow : IWorkflow
                 if (filteredResults.Count > 0)
                 {
                     var best = GetBestMatch(filteredResults, templatePath);
-                    Log($"[NTH Dungoan] Found {templateFileName} - Confidence: {best.Confidence:P1} at ({best.X}, {best.Y})");
+                    var regionInfo = searchRegion != null ? $" [ROI: {searchRegion}]" : " [Full]";
+                    Log($"[NTH Dungoan] Found {templateFileName} - Confidence: {best.Confidence:P1} at ({best.X}, {best.Y}){regionInfo}");
                     return best;
                 }
             }

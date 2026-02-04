@@ -8,6 +8,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using static GameAutomation.Core.Models.Vision.ImageResourceRegistry;
 
 namespace GameAutomation.Core.Workflows.Examples;
 
@@ -227,7 +228,7 @@ public class NthLv26To44SettingCombatWorkflow : IWorkflow
     #region Private Methods
 
     /// <summary>
-    /// Find template using multi-scale matching
+    /// Find template using multi-scale matching with optional ROI
     /// Returns best match (highest confidence, closest to original size)
     /// </summary>
     private async Task<DetectionResult?> FindMultiScaleAsync(
@@ -244,14 +245,19 @@ public class NthLv26To44SettingCombatWorkflow : IWorkflow
 
         var endTime = DateTime.Now.AddMilliseconds(timeoutMs);
 
+        // Get search region using GetEffectiveRegion (respects UseRegionSearch setting)
+        var templateKey = $"combat/{Path.GetFileNameWithoutExtension(templateFileName)}";
+        var searchRegion = GetEffectiveRegion(templateKey);
+
         while (DateTime.Now < endTime)
         {
             cancellationToken.ThrowIfCancellationRequested();
 
             using var screenshot = _visionService.CaptureScreen();
-            var results = _visionService.FindTemplateMultiScale(
+            var results = _visionService.FindTemplateMultiScaleInRegion(
                 screenshot,
                 templatePath,
+                searchRegion,
                 MatchThreshold,
                 MinScale,
                 MaxScale,
@@ -261,7 +267,8 @@ public class NthLv26To44SettingCombatWorkflow : IWorkflow
             {
                 // Get best result: highest confidence, and prefer scale closest to 1.0
                 var best = GetBestMatch(results, templatePath);
-                Log($"[NTH Combat] Found {templateFileName} - Confidence: {best.Confidence:P1} at ({best.X}, {best.Y})");
+                var regionInfo = searchRegion != null ? $" [ROI: {searchRegion}]" : " [Full]";
+                Log($"[NTH Combat] Found {templateFileName} - Confidence: {best.Confidence:P1} at ({best.X}, {best.Y}){regionInfo}");
                 return best;
             }
 

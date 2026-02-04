@@ -247,8 +247,8 @@ public class NthLv26To44DailyWorkflow : IWorkflow
 
         using var screenshot = _visionService.CaptureScreen();
 
-        // Get search region for reset buttons (05_ prefix)
-        var resetRegion = GetRegionByPrefix(ResetTemplate, "daily");
+        // Get search region using GetEffectiveRegion (respects UseRegionSearch setting)
+        var resetRegion = GetEffectiveRegion($"daily/05_daily_reset");
 
         // Tim 05_daily_reset
         var resetPath = Path.Combine(_assetsPath, ResetTemplate);
@@ -406,9 +406,9 @@ public class NthLv26To44DailyWorkflow : IWorkflow
         var actualThreshold = threshold ?? MatchThreshold;
         var endTime = DateTime.Now.AddMilliseconds(timeoutMs);
 
-        // Get search region from registry (auto-detect based on filename prefix)
-        var searchRegion = GetRegionByFileName(templateFileName)
-            ?? GetRegionByPrefix(templateFileName, "daily");
+        // Get search region using GetEffectiveRegion (respects UseRegionSearch setting)
+        var templateKey = $"daily/{System.IO.Path.GetFileNameWithoutExtension(templateFileName)}";
+        var searchRegion = GetEffectiveRegion(templateKey);
 
         while (DateTime.Now < endTime)
         {
