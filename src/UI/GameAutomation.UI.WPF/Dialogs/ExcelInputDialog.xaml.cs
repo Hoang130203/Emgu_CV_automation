@@ -9,6 +9,7 @@ public partial class ExcelInputDialog : Window
 {
     public string? SheetName { get; private set; }
     public int StartRow { get; private set; } = 1;
+    public bool EnableLoop { get; private set; } = false;
 
     public ExcelInputDialog()
     {
@@ -29,6 +30,7 @@ public partial class ExcelInputDialog : Window
 
         SheetName = string.IsNullOrWhiteSpace(SheetNameTextBox.Text) ? null : SheetNameTextBox.Text.Trim();
         StartRow = startRow - 1;
+        EnableLoop = EnableLoopToggle.IsChecked == true;
 
         DialogResult = true;
         Close();
