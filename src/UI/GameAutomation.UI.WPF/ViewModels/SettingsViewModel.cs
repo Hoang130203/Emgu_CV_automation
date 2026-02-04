@@ -29,6 +29,10 @@ public partial class SettingsViewModel : ObservableObject
     [ObservableProperty]
     private int _screenCaptureIntervalMs = 100;
 
+    // Region Search Settings
+    [ObservableProperty]
+    private bool _useRegionSearch = true;
+
     // AI Settings
     [ObservableProperty]
     private AIProvider _selectedAIProvider = AIProvider.None;
@@ -62,6 +66,7 @@ public partial class SettingsViewModel : ObservableObject
         ScreenCaptureIntervalMs = config.ScreenCaptureIntervalMs;
         SelectedAIProvider = config.AIProvider;
         ApiKey = config.AIApiKey ?? string.Empty;
+        UseRegionSearch = config.UseRegionSearch;
     }
 
     public void SaveToConfiguration(BotConfiguration config)
@@ -74,6 +79,7 @@ public partial class SettingsViewModel : ObservableObject
         config.ScreenCaptureIntervalMs = ScreenCaptureIntervalMs;
         config.AIProvider = SelectedAIProvider;
         config.AIApiKey = string.IsNullOrWhiteSpace(ApiKey) ? null : ApiKey;
+        config.UseRegionSearch = UseRegionSearch;
     }
 
     [RelayCommand]

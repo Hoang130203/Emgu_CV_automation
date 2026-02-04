@@ -17,6 +17,13 @@ public class BotConfiguration
     public FeatureMatchingAlgorithm FeatureAlgorithm { get; set; } = FeatureMatchingAlgorithm.ORB;
     public int MinMatchCount { get; set; } = 10;
     public double FeatureMatchRatio { get; set; } = 0.75; // Lowe's ratio test
+
+    // Region Search Settings
+    /// <summary>
+    /// When true, use region-based search (from JSON config or hardcoded).
+    /// When false, always search full screen.
+    /// </summary>
+    public bool UseRegionSearch { get; set; } = true;
 }
 
 public enum AIProvider

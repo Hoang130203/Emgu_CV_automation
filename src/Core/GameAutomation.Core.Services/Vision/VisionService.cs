@@ -700,4 +700,139 @@ public class VisionService : IVisionService
     }
 
     #endregion
+
+    #region ROI-Based Search Methods
+
+    public List<DetectionResult> FindTemplateInRegion(
+        Bitmap screenshot,
+        string templatePath,
+        SearchRegion region,
+        double threshold = 0.8)
+    {
+        if (!File.Exists(templatePath))
+            throw new FileNotFoundException($"Template file not found: {templatePath}");
+
+        // If full screen, use regular method
+        if (region.IsFullScreen)
+        {
+            return FindTemplate(screenshot, templatePath, threshold);
+        }
+
+        // Calculate pixel bounds from region ratios
+        var (roiX, roiY, roiWidth, roiHeight) = region.ToPixelBounds(screenshot.Width, screenshot.Height);
+
+        // Validate ROI bounds
+        if (roiWidth <= 0 || roiHeight <= 0)
+            return new List<DetectionResult>();
+
+        using var templateBitmap = new Bitmap(templatePath);
+
+        // Skip if template is larger than ROI
+        if (templateBitmap.Width > roiWidth || templateBitmap.Height > roiHeight)
+            return new List<DetectionResult>();
+
+        // Extract ROI from screenshot
+        using var roiBitmap = ExtractRegion(screenshot, roiX, roiY, roiWidth, roiHeight);
+
+        // Find template in ROI
+        var roiResults = FindTemplateInternal(roiBitmap, templateBitmap, threshold);
+
+        // Transform coordinates back to full screenshot space
+        return roiResults.Select(r => new DetectionResult
+        {
+            Found = r.Found,
+            Confidence = r.Confidence,
+            X = r.X + roiX,  // Add ROI offset
+            Y = r.Y + roiY,
+            Width = r.Width,
+            Height = r.Height,
+            DetectedAt = r.DetectedAt
+        }).ToList();
+    }
+
+    public List<DetectionResult> FindTemplateMultiScaleInRegion(
+        Bitmap screenshot,
+        string templatePath,
+        SearchRegion? region,
+        double threshold = 0.7,
+        double minScale = 0.5,
+        double maxScale = 2.0,
+        int scaleSteps = 10)
+    {
+        if (!File.Exists(templatePath))
+            throw new FileNotFoundException($"Template file not found: {templatePath}");
+
+        // If no region or full screen, use regular method
+        if (region == null || region.IsFullScreen)
+        {
+            return FindTemplateMultiScale(screenshot, templatePath, threshold, minScale, maxScale, scaleSteps);
+        }
+
+        // Calculate pixel bounds from region ratios
+        var (roiX, roiY, roiWidth, roiHeight) = region.ToPixelBounds(screenshot.Width, screenshot.Height);
+
+        // Validate ROI bounds
+        if (roiWidth <= 0 || roiHeight <= 0)
+            return new List<DetectionResult>();
+
+        using var templateBitmap = new Bitmap(templatePath);
+
+        // Extract ROI from screenshot
+        using var roiBitmap = ExtractRegion(screenshot, roiX, roiY, roiWidth, roiHeight);
+
+        // Find template in ROI using multi-scale
+        var roiResults = FindTemplateMultiScaleInternal(roiBitmap, templateBitmap, threshold, minScale, maxScale, scaleSteps);
+
+        // Transform coordinates back to full screenshot space
+        return roiResults.Select(r => new DetectionResult
+        {
+            Found = r.Found,
+            Confidence = r.Confidence,
+            X = r.X + roiX,  // Add ROI offset
+            Y = r.Y + roiY,
+            Width = r.Width,
+            Height = r.Height,
+            DetectedAt = r.DetectedAt
+        }).ToList();
+    }
+
+    public (int x, int y, int width, int height)? GetWindowBounds(string windowTitle)
+    {
+        IntPtr hwnd = FindWindow(null, windowTitle);
+        if (hwnd == IntPtr.Zero)
+            return null;
+
+        if (!GetWindowRect(hwnd, out RECT rect))
+            return null;
+
+        return (rect.Left, rect.Top, rect.Right - rect.Left, rect.Bottom - rect.Top);
+    }
+
+    /// <summary>
+    /// Extract a rectangular region from a bitmap
+    /// </summary>
+    private static Bitmap ExtractRegion(Bitmap source, int x, int y, int width, int height)
+    {
+        // Clamp to valid bounds
+        x = Math.Max(0, Math.Min(x, source.Width - 1));
+        y = Math.Max(0, Math.Min(y, source.Height - 1));
+        width = Math.Min(width, source.Width - x);
+        height = Math.Min(height, source.Height - y);
+
+        if (width <= 0 || height <= 0)
+            return new Bitmap(1, 1);
+
+        var destRect = new Rectangle(0, 0, width, height);
+        var srcRect = new Rectangle(x, y, width, height);
+
+        var result = new Bitmap(width, height, source.PixelFormat);
+        using (var g = Graphics.FromImage(result))
+        {
+            g.DrawImage(source, destRect, srcRect, GraphicsUnit.Pixel);
+        }
+
+        return result;
+    }
+
+    #endregion
 }

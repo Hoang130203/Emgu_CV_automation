@@ -121,4 +121,47 @@ public interface IVisionService
         double minScale = 0.5,
         double maxScale = 2.0,
         int scaleSteps = 10);
+
+    // === ROI-Based Search Methods (Optimized) ===
+
+    /// <summary>
+    /// Find template in a specific region of interest (ROI) for faster search
+    /// </summary>
+    /// <param name="screenshot">Screenshot bitmap</param>
+    /// <param name="templatePath">Path to template image file</param>
+    /// <param name="region">Search region (ratio-based)</param>
+    /// <param name="threshold">Match threshold (0.0 to 1.0)</param>
+    /// <returns>List of detection results with coordinates relative to full screenshot</returns>
+    List<DetectionResult> FindTemplateInRegion(
+        Bitmap screenshot,
+        string templatePath,
+        SearchRegion region,
+        double threshold = 0.8);
+
+    /// <summary>
+    /// Find template using multi-scale matching within a specific region of interest
+    /// </summary>
+    /// <param name="screenshot">Screenshot bitmap</param>
+    /// <param name="templatePath">Path to template image file</param>
+    /// <param name="region">Search region (ratio-based), null = full screen</param>
+    /// <param name="threshold">Match threshold (0.0 to 1.0)</param>
+    /// <param name="minScale">Minimum scale factor</param>
+    /// <param name="maxScale">Maximum scale factor</param>
+    /// <param name="scaleSteps">Number of scale steps to try</param>
+    /// <returns>List of detection results with coordinates relative to full screenshot</returns>
+    List<DetectionResult> FindTemplateMultiScaleInRegion(
+        Bitmap screenshot,
+        string templatePath,
+        SearchRegion? region,
+        double threshold = 0.7,
+        double minScale = 0.5,
+        double maxScale = 2.0,
+        int scaleSteps = 10);
+
+    /// <summary>
+    /// Get window position and size for coordinate transformation
+    /// </summary>
+    /// <param name="windowTitle">Window title to find</param>
+    /// <returns>Window bounds (x, y, width, height) or null if not found</returns>
+    (int x, int y, int width, int height)? GetWindowBounds(string windowTitle);
 }

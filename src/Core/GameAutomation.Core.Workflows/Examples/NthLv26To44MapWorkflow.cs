@@ -8,6 +8,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using static GameAutomation.Core.Models.Vision.ImageResourceRegistry;
 
 namespace GameAutomation.Core.Workflows.Examples;
 
@@ -88,7 +89,7 @@ public class NthLv26To44MapWorkflow : IWorkflow
 
             if (zoomButton != null)
             {
-                for (int i = 0; i < 3; i++)
+                for (int i = 0; i < 5; i++)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
 
@@ -177,11 +178,11 @@ public class NthLv26To44MapWorkflow : IWorkflow
 
                     await _humanSim.MoveMouseAsync(undoCenterX, undoCenterY);
                     await _humanSim.LeftClickAsync();
-                    await Task.Delay(ShortDelayMs, cancellationToken);
+                    await Task.Delay(50, cancellationToken);
                     await _humanSim.LeftClickAsync();
-                    await Task.Delay(ShortDelayMs, cancellationToken);
+                    await Task.Delay(50, cancellationToken);
                     await _humanSim.LeftClickAsync();
-                    await Task.Delay(ShortDelayMs, cancellationToken);
+                    await Task.Delay(50, cancellationToken);
                 }
                 else
                 {
@@ -342,7 +343,7 @@ public class NthLv26To44MapWorkflow : IWorkflow
     }
 
     /// <summary>
-    /// Find template using multi-scale matching
+    /// Find template using multi-scale matching with optional ROI
     /// Returns best match (highest confidence, closest to original size)
     /// </summary>
     /// <param name="threshold">Custom threshold (default uses MatchThreshold = 0.7)</param>
@@ -362,14 +363,19 @@ public class NthLv26To44MapWorkflow : IWorkflow
         var actualThreshold = threshold ?? MatchThreshold;
         var endTime = DateTime.Now.AddMilliseconds(timeoutMs);
 
+        // Get search region using GetEffectiveRegion (respects UseRegionSearch setting)
+        var templateKey = $"map/{Path.GetFileNameWithoutExtension(templateFileName)}";
+        var searchRegion = GetEffectiveRegion(templateKey);
+
         while (DateTime.Now < endTime)
         {
             cancellationToken.ThrowIfCancellationRequested();
 
             using var screenshot = _visionService.CaptureScreen();
-            var results = _visionService.FindTemplateMultiScale(
+            var results = _visionService.FindTemplateMultiScaleInRegion(
                 screenshot,
                 templatePath,
+                searchRegion,
                 actualThreshold,
                 MinScale,
                 MaxScale,
@@ -383,7 +389,8 @@ public class NthLv26To44MapWorkflow : IWorkflow
                 if (filteredResults.Count > 0)
                 {
                     var best = GetBestMatch(filteredResults, templatePath);
-                    Log($"[NTH Map] Found {templateFileName} - Confidence: {best.Confidence:P1} at ({best.X}, {best.Y})");
+                    var regionInfo = searchRegion != null ? $" [ROI: {searchRegion}]" : " [Full]";
+                    Log($"[NTH Map] Found {templateFileName} - Confidence: {best.Confidence:P1} at ({best.X}, {best.Y}){regionInfo}");
                     return best;
                 }
             }
