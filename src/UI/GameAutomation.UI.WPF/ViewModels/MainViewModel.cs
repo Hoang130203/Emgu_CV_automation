@@ -6,6 +6,7 @@ using GameAutomation.Core.Models.Vision;
 using GameAutomation.Core.Services.Configuration;
 using GameAutomation.Core.Services.Input;
 using GameAutomation.Core.Services.Vision;
+using GameAutomation.Core.Services.Excel;
 using GameAutomation.Core.Workflows.Examples;
 using GameAutomation.UI.WPF;
 using GameAutomation.UI.WPF.Dialogs;
@@ -385,6 +386,7 @@ public partial class MainViewModel : ObservableObject
     /// <summary>
     /// Flow NTH Full: Tổng hợp tất cả các bước
     /// Sign-In -> Wait 10s -> Camera -> MHL -> Combat -> Map -> Daily -> Dungoan -> Signout
+    /// Hỗ trợ loop: tự động chạy dòng tiếp theo sau khi hoàn thành
     /// </summary>
     private async Task RunNthFullFlowAsync(WorkflowViewModel workflow)
     {
@@ -397,6 +399,7 @@ public partial class MainViewModel : ObservableObject
         // Show input dialog on UI thread for Excel parameters
         string? sheetName = null;
         int startRow = 1;
+        bool enableLoop = false;
         bool dialogResult = false;
 
         await Application.Current.Dispatcher.InvokeAsync(() =>
@@ -410,6 +413,7 @@ public partial class MainViewModel : ObservableObject
             {
                 sheetName = dialog.SheetName;
                 startRow = dialog.StartRow;
+                enableLoop = dialog.EnableLoop;
                 dialogResult = true;
             }
         });
@@ -434,34 +438,85 @@ public partial class MainViewModel : ObservableObject
         try
         {
             AddLog("[NTH Full Flow] Starting complete game workflow...");
-            AddLog($"  Sheet: {sheetName ?? "(default)"}, Start Row: {startRow}");
+            AddLog($"  Sheet: {sheetName ?? "(default)"}, Start Row: {startRow + 1}, Loop: {(enableLoop ? "Enabled" : "Disabled")}");
 
             await Task.Run(async () =>
             {
                 var inputService = new InputService();
-                var fullFlowWorkflow = new NthFullFlowWorkflow(
-                    _visionService,
-                    inputService,
-                    _templatesFolder,
-                    sheetName,
-                    startRow,
-                    logger: msg => AddLog(msg));
-
+                var excelService = new ExcelService();
                 var context = new GameContext { GameName = "NTH Game" };
-                var result = await fullFlowWorkflow.ExecuteAsync(context, token);
 
-                if (result.Success)
+                // Find Excel file for row count check
+                var signinAssetsPath = Path.Combine(_templatesFolder, "nth", "signin");
+                var excelFile = FindExcelFile(signinAssetsPath);
+                int totalRows = 0;
+
+                if (enableLoop && excelFile != null)
                 {
-                    AddLog($"[NTH Full Flow] Completed: {result.Message}");
-                    UpdateWorkflowStatus(workflow, "Ready", incrementExecution: true);
-                }
-                else
-                {
-                    AddLog($"[NTH Full Flow] Failed: {result.Message}");
-                    UpdateWorkflowStatus(workflow, "Failed");
+                    totalRows = excelService.GetRowCount(excelFile, sheetName);
+                    AddLog($"[NTH Full Flow] Excel has {totalRows} data row(s). Loop enabled.");
                 }
 
+                int currentRow = startRow;
+                int loopIteration = 1;
+
+                do
+                {
+                    if (token.IsCancellationRequested)
+                    {
+                        AddLog("[NTH Full Flow] Loop cancelled by user.");
+                        break;
+                    }
+
+                    if (enableLoop)
+                    {
+                        AddLog($"\n========== LOOP {loopIteration}: Row {currentRow + 1} ==========");
+                    }
+
+                    var fullFlowWorkflow = new NthFullFlowWorkflow(
+                        _visionService,
+                        inputService,
+                        _templatesFolder,
+                        sheetName,
+                        currentRow,
+                        logger: msg => AddLog(msg));
+
+                    var result = await fullFlowWorkflow.ExecuteAsync(context, token);
+
+                    if (result.Success)
+                    {
+                        AddLog($"[NTH Full Flow] Row {currentRow + 1} completed: {result.Message}");
+                        UpdateWorkflowStatus(workflow, "Running", incrementExecution: true);
+                    }
+                    else
+                    {
+                        AddLog($"[NTH Full Flow] Row {currentRow + 1} failed: {result.Message}");
+                        // Continue to next row even if failed
+                    }
+
+                    // Check if we should continue looping
+                    if (enableLoop)
+                    {
+                        currentRow++;
+                        loopIteration++;
+
+                        // Check if we've processed all rows
+                        if (currentRow >= totalRows)
+                        {
+                            AddLog($"\n[NTH Full Flow] All {totalRows} rows processed. Loop complete!");
+                            break;
+                        }
+
+                        // Small delay between iterations
+                        AddLog($"[NTH Full Flow] Proceeding to next row ({currentRow + 1}/{totalRows})...");
+                        await Task.Delay(2000, token);
+                    }
+
+                } while (enableLoop && currentRow < totalRows && !token.IsCancellationRequested);
+
+                UpdateWorkflowStatus(workflow, "Ready");
                 RestoreMainWindow();
+
             }, token);
         }
         catch (OperationCanceledException)
@@ -476,6 +531,24 @@ public partial class MainViewModel : ObservableObject
             workflow.Status = "Error";
             RestoreMainWindow();
         }
+    }
+
+    /// <summary>
+    /// Find Excel file in assets path
+    /// </summary>
+    private string? FindExcelFile(string assetsPath)
+    {
+        if (!Directory.Exists(assetsPath))
+            return null;
+
+        // Look for "Nick phu nth.xlsx" first
+        var specificFile = Path.Combine(assetsPath, "Nick phu nth.xlsx");
+        if (File.Exists(specificFile))
+            return specificFile;
+
+        // Look for any .xlsx file
+        var xlsxFiles = Directory.GetFiles(assetsPath, "*.xlsx");
+        return xlsxFiles.FirstOrDefault();
     }
 
     /// <summary>
