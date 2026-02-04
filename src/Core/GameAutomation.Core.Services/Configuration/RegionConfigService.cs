@@ -228,4 +228,15 @@ public class RegionConfigService
     /// Get config file path
     /// </summary>
     public string ConfigPath => _configPath;
+
+    /// <summary>
+    /// Get the underlying RegionConfig (for passing to ImageResourceRegistry)
+    /// </summary>
+    public RegionConfig GetConfig()
+    {
+        lock (_lock)
+        {
+            return _config;
+        }
+    }
 }

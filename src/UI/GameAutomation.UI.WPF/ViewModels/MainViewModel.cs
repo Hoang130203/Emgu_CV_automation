@@ -109,7 +109,10 @@ public partial class MainViewModel : ObservableObject
         try
         {
             await _regionConfigService.LoadAsync();
-            // Note: We can't directly access RegionConfig from service, but GetAllKeys works
+
+            // IMPORTANT: Pass the loaded config to ImageResourceRegistry so workflows can use it
+            ImageResourceRegistry.SetRegionConfig(_regionConfigService.GetConfig());
+
             var customRegionCount = _regionConfigService.GetAllKeys().Count;
             if (customRegionCount > 0)
             {
@@ -147,7 +150,11 @@ public partial class MainViewModel : ObservableObject
         };
 
         regionEditorWindow.ShowDialog();
-        AddLog("Region Editor closed.");
+
+        // Update ImageResourceRegistry with potentially modified config
+        ImageResourceRegistry.SetRegionConfig(_regionConfigService.GetConfig());
+        var customRegionCount = _regionConfigService.GetAllKeys().Count;
+        AddLog($"Region Editor closed. {customRegionCount} custom regions active.");
     }
 
     private void ApplySettings()
