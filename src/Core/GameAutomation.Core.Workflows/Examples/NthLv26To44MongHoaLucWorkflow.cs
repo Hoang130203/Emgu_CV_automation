@@ -38,6 +38,7 @@ public class NthLv26To44MongHoaLucWorkflow : IWorkflow
     private const double MinScale = 0.5;
     private const double MaxScale = 1.5;
     private const int ScaleSteps = 15;
+    private const int ReferenceWidth = 1920; // Resolution where templates were captured
 
     // Delays
     private const int AfterClickDelayMs = 500;  // Chờ 0.5s sau khi click
@@ -250,14 +251,21 @@ public class NthLv26To44MongHoaLucWorkflow : IWorkflow
             cancellationToken.ThrowIfCancellationRequested();
 
             using var screenshot = _visionService.CaptureScreen();
+
+            // Dynamic scale calculation based on resolution
+            double currentScale = (double)screenshot.Width / ReferenceWidth;
+            double dynamicMinScale = Math.Max(0.1, currentScale - 0.15); // +/- 15% range
+            double dynamicMaxScale = currentScale + 0.15;
+            int dynamicSteps = 10; // Optimized for speed and precision
+
             var results = _visionService.FindTemplateMultiScaleInRegion(
                 screenshot,
                 templatePath,
                 searchRegion,
                 MatchThreshold,
-                MinScale,
-                MaxScale,
-                ScaleSteps);
+                dynamicMinScale,
+                dynamicMaxScale,
+                dynamicSteps);
 
             if (results.Count > 0)
             {

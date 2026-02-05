@@ -241,94 +241,152 @@ public class VisionService : IVisionService
 
     private List<DetectionResult> FindTemplateInternal(Bitmap screenshot, Bitmap template, double threshold)
     {
+        var stopwatch = System.Diagnostics.Stopwatch.StartNew();
         var results = new List<DetectionResult>();
 
-        // Convert to 24bpp RGB if needed
-        bool screenshotConverted = screenshot.PixelFormat != PixelFormat.Format24bppRgb;
-        bool templateConverted = template.PixelFormat != PixelFormat.Format24bppRgb;
+        // Ensure formats (using existing helper, optimized later if needed)
+        Bitmap screenshot24 = screenshot.PixelFormat == PixelFormat.Format24bppRgb ? screenshot : ConvertTo24bpp(screenshot);
+        Bitmap template24 = template.PixelFormat == PixelFormat.Format24bppRgb ? template : ConvertTo24bpp(template);
 
-        Bitmap screenshot24 = screenshotConverted ? ConvertTo24bpp(screenshot) : screenshot;
-        Bitmap template24 = templateConverted ? ConvertTo24bpp(template) : template;
+        bool disposeScreenshot = screenshot24 != screenshot;
+        bool disposeTemplate = template24 != template;
+
+        BitmapData? screenshotData = null;
+        BitmapData? templateData = null;
 
         try
         {
-            using var sourceImage = BitmapToImage(screenshot24);
-            using var templateImage = BitmapToImage(template24);
-            using var result = sourceImage.MatchTemplate(templateImage, TemplateMatchingType.CcoeffNormed);
+            // Zero-Copy approach: Lock bits and create Mat header from pointer
+            screenshotData = screenshot24.LockBits(
+                new Rectangle(0, 0, screenshot24.Width, screenshot24.Height),
+                ImageLockMode.ReadOnly,
+                PixelFormat.Format24bppRgb);
 
-            // Find all matches above threshold
-            double[] minValues, maxValues;
-            Point[] minLocations, maxLocations;
+            templateData = template24.LockBits(
+                new Rectangle(0, 0, template24.Width, template24.Height),
+                ImageLockMode.ReadOnly,
+                PixelFormat.Format24bppRgb);
 
-            result.MinMax(out minValues, out maxValues, out minLocations, out maxLocations);
+            using var sourceMat = new Mat(screenshot24.Height, screenshot24.Width, DepthType.Cv8U, 3, screenshotData.Scan0, screenshotData.Stride);
+            using var templateMat = new Mat(template24.Height, template24.Width, DepthType.Cv8U, 3, templateData.Scan0, templateData.Stride);
 
-            // Get the best match first
-            if (maxValues[0] >= threshold)
+            using var resultMat = new Mat();
+            CvInvoke.MatchTemplate(sourceMat, templateMat, resultMat, TemplateMatchingType.CcoeffNormed);
+
+            // Find all matches
+            double minVal = 0, maxVal = 0;
+            Point minLoc = new Point(), maxLoc = new Point();
+            
+            // First loop for best match
+            CvInvoke.MinMaxLoc(resultMat, ref minVal, ref maxVal, ref minLoc, ref maxLoc);
+
+            if (maxVal >= threshold)
             {
+                stopwatch.Stop();
+                System.Diagnostics.Debug.WriteLine($"[TIMING] FindTemplate matches: {stopwatch.ElapsedMilliseconds}ms (Conf: {maxVal:F2})");
+                
                 results.Add(new DetectionResult
                 {
                     Found = true,
-                    Confidence = maxValues[0],
-                    X = maxLocations[0].X,
-                    Y = maxLocations[0].Y,
+                    Confidence = maxVal,
+                    X = maxLoc.X,
+                    Y = maxLoc.Y,
                     Width = template.Width,
                     Height = template.Height,
                     DetectedAt = DateTime.UtcNow
                 });
 
-                // Find additional matches by masking the found region
-                using var resultCopy = result.Clone();
+                // Find additional matches using resultMat logic (same multiple match logic)
+                using var resultCopy = resultMat.Clone();
                 var maskSize = Math.Max(template.Width, template.Height) / 2;
 
-                for (int i = 0; i < 100; i++) // Limit to 100 matches max
+                for (int i = 0; i < 20; i++) // Reduced limit for perfs
                 {
-                    // Mask the found region
-                    int maskX = Math.Max(0, maxLocations[0].X - maskSize);
-                    int maskY = Math.Max(0, maxLocations[0].Y - maskSize);
+                    int maskX = Math.Max(0, maxLoc.X - maskSize);
+                    int maskY = Math.Max(0, maxLoc.Y - maskSize);
                     int maskW = Math.Min(maskSize * 2, resultCopy.Width - maskX);
                     int maskH = Math.Min(maskSize * 2, resultCopy.Height - maskY);
 
                     if (maskW > 0 && maskH > 0)
-                    {
-                        resultCopy.ROI = new Rectangle(maskX, maskY, maskW, maskH);
-                        resultCopy.SetZero();
-                        resultCopy.ROI = Rectangle.Empty;
-                    }
+                        CvInvoke.Rectangle(resultCopy, new Rectangle(maskX, maskY, maskW, maskH), new MCvScalar(-1), -1);
 
-                    resultCopy.MinMax(out minValues, out maxValues, out minLocations, out maxLocations);
+                    CvInvoke.MinMaxLoc(resultCopy, ref minVal, ref maxVal, ref minLoc, ref maxLoc);
 
-                    if (maxValues[0] < threshold)
-                        break;
+                    if (maxVal < threshold) break;
 
                     results.Add(new DetectionResult
                     {
                         Found = true,
-                        Confidence = maxValues[0],
-                        X = maxLocations[0].X,
-                        Y = maxLocations[0].Y,
+                        Confidence = maxVal,
+                        X = maxLoc.X,
+                        Y = maxLoc.Y,
                         Width = template.Width,
                         Height = template.Height,
                         DetectedAt = DateTime.UtcNow
                     });
                 }
             }
+            else
+            {
+                stopwatch.Stop();
+                System.Diagnostics.Debug.WriteLine($"[TIMING] FindTemplate NO match: {stopwatch.ElapsedMilliseconds}ms");
+            }
         }
         finally
         {
-            if (screenshotConverted)
-                screenshot24.Dispose();
-            if (templateConverted)
-                template24.Dispose();
+            if (screenshotData != null) screenshot24.UnlockBits(screenshotData);
+            if (templateData != null) template24.UnlockBits(templateData);
+            
+            if (disposeScreenshot) screenshot24.Dispose();
+            if (disposeTemplate) template24.Dispose();
         }
 
         return results.OrderByDescending(r => r.Confidence).ToList();
     }
 
+    // Generic Tesseract instance (lazy loaded)
+    private Emgu.CV.OCR.Tesseract? _tesseract;
+
     public string ExtractText(Bitmap image)
     {
-        // Basic OCR placeholder - requires Tesseract setup
-        // For full OCR, add Emgu.CV.OCR package and configure Tesseract
-        throw new NotImplementedException("OCR requires Tesseract setup. Add Emgu.CV.OCR package and tessdata.");
+        try 
+        {
+            if (_tesseract == null)
+            {
+                // Path to tessdata - assume it's in app execution folder
+                string tessdataPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "tessdata");
+                if (!Directory.Exists(tessdataPath))
+                {
+                    Directory.CreateDirectory(tessdataPath);
+                    System.Diagnostics.Debug.WriteLine($"[OCR] Warning: 'tessdata' folder created at {tessdataPath}. Please download 'eng.traineddata'.");
+                    return "";
+                }
+                
+                // Initialize Tesseract (eng, OcrEngineMode.LstmOnly)
+                // Note: This requires 'eng.traineddata' in the tessdata folder
+                try {
+                     _tesseract = new Emgu.CV.OCR.Tesseract(tessdataPath, "eng", Emgu.CV.OCR.OcrEngineMode.LstmOnly);
+                } catch {
+                     // Fallback or just return empty if init fails (e.g. missing data)
+                     System.Diagnostics.Debug.WriteLine("[OCR] Failed to init Tesseract. Missing tessdata?");
+                     return "";
+                }
+            }
+
+            // Convert to grayscale Mat for Tesseract
+            using var mat = BitmapToImage(image);
+            using var gray = new Mat();
+            CvInvoke.CvtColor(mat, gray, ColorConversion.Bgr2Gray);
+            
+            _tesseract.SetImage(gray);
+            _tesseract.Recognize();
+            return _tesseract.GetUTF8Text().Trim();
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[OCR] Error: {ex.Message}");
+            return "";
+        }
     }
 
     public bool DetectColor(Bitmap image, int x, int y, int width, int height, Color targetColor, int tolerance = 10)
@@ -485,6 +543,7 @@ public class VisionService : IVisionService
         double maxScale,
         int scaleSteps)
     {
+        var stopwatch = System.Diagnostics.Stopwatch.StartNew();
         var allResults = new List<DetectionResult>();
 
         // Convert screenshot to 24bpp once
@@ -551,6 +610,12 @@ public class VisionService : IVisionService
             if (screenshotConverted)
                 screenshot24.Dispose();
         }
+
+        stopwatch.Stop();
+        if (allResults.Count > 0)
+             System.Diagnostics.Debug.WriteLine($"[TIMING] MultiScale found {allResults.Count}: {stopwatch.ElapsedMilliseconds}ms (Best: {allResults[0].Confidence:F2})");
+        else
+             System.Diagnostics.Debug.WriteLine($"[TIMING] MultiScale NO match: {stopwatch.ElapsedMilliseconds}ms");
 
         // Return best matches sorted by confidence
         return allResults.OrderByDescending(r => r.Confidence).ToList();

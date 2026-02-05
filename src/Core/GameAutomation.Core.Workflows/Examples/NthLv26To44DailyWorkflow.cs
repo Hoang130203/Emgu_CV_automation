@@ -48,6 +48,7 @@ public class NthLv26To44DailyWorkflow : IWorkflow
     private const double MinScale = 0.5;
     private const double MaxScale = 1.5;
     private const int ScaleSteps = 15;
+    private const int ReferenceWidth = 1920; // Resolution where templates were captured
 
     // Delays
     private const int AfterClickDelayMs = 500;  // 0.5s sau moi click
@@ -250,6 +251,12 @@ public class NthLv26To44DailyWorkflow : IWorkflow
         // Get search region using GetEffectiveRegion (respects UseRegionSearch setting)
         var resetRegion = GetEffectiveRegion($"daily/05_daily_reset");
 
+        // Dynamic scale calculation
+        double currentScale = (double)screenshot.Width / ReferenceWidth;
+        double dynamicMinScale = Math.Max(0.1, currentScale - 0.15);
+        double dynamicMaxScale = currentScale + 0.15;
+        int dynamicSteps = 10;
+
         // Tim 05_daily_reset
         var resetPath = Path.Combine(_assetsPath, ResetTemplate);
         if (File.Exists(resetPath))
@@ -259,9 +266,9 @@ public class NthLv26To44DailyWorkflow : IWorkflow
                 resetPath,
                 resetRegion,
                 MatchThreshold + 0.05,
-                MinScale,
-                MaxScale,
-                ScaleSteps);
+                dynamicMinScale,
+                dynamicMaxScale,
+                dynamicSteps);
 
             allResets.AddRange(results.Where(r => r.Confidence >= MatchThreshold));
         }
@@ -275,9 +282,9 @@ public class NthLv26To44DailyWorkflow : IWorkflow
                 reset2Path,
                 resetRegion,
                 MatchThreshold + 0.05,
-                MinScale,
-                MaxScale,
-                ScaleSteps);
+                dynamicMinScale,
+                dynamicMaxScale,
+                dynamicSteps);
 
             allResets.AddRange(results2.Where(r => r.Confidence >= MatchThreshold));
         }
@@ -416,15 +423,22 @@ public class NthLv26To44DailyWorkflow : IWorkflow
 
             using var screenshot = _visionService.CaptureScreen();
 
+            // Dynamic scale calculation based on resolution
+            // Assumes templates were captured at 1920x1080 (ReferenceWidth)
+            double currentScale = (double)screenshot.Width / ReferenceWidth;
+            double dynamicMinScale = Math.Max(0.1, currentScale - 0.15); // +/- 15% range
+            double dynamicMaxScale = currentScale + 0.15;
+            int dynamicSteps = 10; // Increased for better precision
+
             // Use ROI-based search if region is defined, otherwise full screen
             var results = _visionService.FindTemplateMultiScaleInRegion(
                 screenshot,
                 templatePath,
                 searchRegion,
                 actualThreshold,
-                MinScale,
-                MaxScale,
-                ScaleSteps);
+                dynamicMinScale,
+                dynamicMaxScale,
+                dynamicSteps);
 
             if (results.Count > 0)
             {
