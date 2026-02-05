@@ -336,23 +336,51 @@ public class VisionService : IVisionService
         int endX = Math.Min(x + width, image.Width);
         int endY = Math.Min(y + height, image.Height);
 
-        bool converted = image.PixelFormat != PixelFormat.Format24bppRgb;
-        Bitmap image24 = converted ? ConvertTo24bpp(image) : image;
+        if (x < 0 || y < 0 || x >= image.Width || y >= image.Height)
+            return false;
 
+        bool converted = false;
+        Bitmap processImage = image;
+
+        // Ensure 24bpp or 32bpp for consistent processing
+        if (image.PixelFormat != PixelFormat.Format24bppRgb && image.PixelFormat != PixelFormat.Format32bppArgb)
+        {
+            processImage = ConvertTo24bpp(image);
+            converted = true;
+        }
+
+        BitmapData? data = null;
         try
         {
-            using var img = BitmapToImage(image24);
+            data = processImage.LockBits(
+                new Rectangle(0, 0, processImage.Width, processImage.Height),
+                ImageLockMode.ReadOnly,
+                processImage.PixelFormat);
 
-            for (int py = y; py < endY; py++)
+            int bytesPerPixel = processImage.PixelFormat == PixelFormat.Format24bppRgb ? 3 : 4;
+            int stride = data.Stride;
+            IntPtr scan0 = data.Scan0;
+
+            unsafe
             {
-                for (int px = x; px < endX; px++)
+                byte* ptr = (byte*)scan0;
+
+                for (int py = y; py < endY; py++)
                 {
-                    var pixel = img[py, px];
-                    if (Math.Abs(pixel.Red - targetColor.R) <= tolerance &&
-                        Math.Abs(pixel.Green - targetColor.G) <= tolerance &&
-                        Math.Abs(pixel.Blue - targetColor.B) <= tolerance)
+                    byte* row = ptr + (py * stride);
+                    for (int px = x; px < endX; px++)
                     {
-                        return true;
+                        int idx = px * bytesPerPixel;
+                        byte b = row[idx];
+                        byte g = row[idx + 1];
+                        byte r = row[idx + 2];
+
+                        if (Math.Abs(r - targetColor.R) <= tolerance &&
+                            Math.Abs(g - targetColor.G) <= tolerance &&
+                            Math.Abs(b - targetColor.B) <= tolerance)
+                        {
+                            return true;
+                        }
                     }
                 }
             }
@@ -361,8 +389,11 @@ public class VisionService : IVisionService
         }
         finally
         {
+            if (data != null)
+                processImage.UnlockBits(data);
+            
             if (converted)
-                image24.Dispose();
+                processImage.Dispose();
         }
     }
 
@@ -370,23 +401,47 @@ public class VisionService : IVisionService
     {
         var positions = new List<Point>();
 
-        bool converted = image.PixelFormat != PixelFormat.Format24bppRgb;
-        Bitmap image24 = converted ? ConvertTo24bpp(image) : image;
+        bool converted = false;
+        Bitmap processImage = image;
 
+        if (image.PixelFormat != PixelFormat.Format24bppRgb && image.PixelFormat != PixelFormat.Format32bppArgb)
+        {
+            processImage = ConvertTo24bpp(image);
+            converted = true;
+        }
+
+        BitmapData? data = null;
         try
         {
-            using var img = BitmapToImage(image24);
+            data = processImage.LockBits(
+                new Rectangle(0, 0, processImage.Width, processImage.Height),
+                ImageLockMode.ReadOnly,
+                processImage.PixelFormat);
 
-            for (int y = 0; y < image.Height; y++)
+            int bytesPerPixel = processImage.PixelFormat == PixelFormat.Format24bppRgb ? 3 : 4;
+            int stride = data.Stride;
+            IntPtr scan0 = data.Scan0;
+
+            unsafe
             {
-                for (int x = 0; x < image.Width; x++)
+                byte* ptr = (byte*)scan0;
+
+                for (int y = 0; y < processImage.Height; y++)
                 {
-                    var pixel = img[y, x];
-                    if (Math.Abs(pixel.Red - targetColor.R) <= tolerance &&
-                        Math.Abs(pixel.Green - targetColor.G) <= tolerance &&
-                        Math.Abs(pixel.Blue - targetColor.B) <= tolerance)
+                    byte* row = ptr + (y * stride);
+                    for (int x = 0; x < processImage.Width; x++)
                     {
-                        positions.Add(new Point(x, y));
+                        int idx = x * bytesPerPixel;
+                        byte b = row[idx];
+                        byte g = row[idx + 1];
+                        byte r = row[idx + 2];
+
+                        if (Math.Abs(r - targetColor.R) <= tolerance &&
+                            Math.Abs(g - targetColor.G) <= tolerance &&
+                            Math.Abs(b - targetColor.B) <= tolerance)
+                        {
+                            positions.Add(new Point(x, y));
+                        }
                     }
                 }
             }
@@ -395,8 +450,11 @@ public class VisionService : IVisionService
         }
         finally
         {
+            if (data != null)
+                processImage.UnlockBits(data);
+
             if (converted)
-                image24.Dispose();
+                processImage.Dispose();
         }
     }
 

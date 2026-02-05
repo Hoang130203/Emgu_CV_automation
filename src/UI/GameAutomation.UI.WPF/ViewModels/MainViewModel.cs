@@ -1,4 +1,5 @@
 using CommunityToolkit.Mvvm.ComponentModel;
+using GameAutomation.UI.WPF.Helpers;
 using CommunityToolkit.Mvvm.Input;
 using GameAutomation.Core.Models.Configuration;
 using GameAutomation.Core.Models.GameState;
@@ -319,72 +320,31 @@ public partial class MainViewModel : ObservableObject
     {
         var screenshot = _visionService.CaptureScreen();
 
-        // Save với timestamp
-        var timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss_fff");
-        var filename = $"screenshot_{timestamp}.png";
-        var filepath = Path.Combine(_screenshotsFolder, filename);
-        screenshot.Save(filepath, ImageFormat.Png);
-
-        // Cleanup ảnh cũ - giữ lại MaxScreenshots
-        CleanupOldScreenshots();
-
-        // Update preview trên UI
-        UpdateScreenPreview(filepath);
+        // Update preview directly from memory (No I/O)
+        UpdateScreenPreview(screenshot);
 
         return screenshot;
     }
 
-    private void CleanupOldScreenshots()
-    {
-        try
-        {
-            var screenshots = Directory.GetFiles(_screenshotsFolder, "screenshot_*.png")
-                .Select(f => new FileInfo(f))
-                .OrderByDescending(f => f.CreationTime)
-                .ToList();
+    // Removed CleanupOldScreenshots as we don't save files anymore
 
-            if (screenshots.Count > MaxScreenshots)
-            {
-                var toDelete = screenshots.Skip(MaxScreenshots).ToList();
-                foreach (var file in toDelete)
-                {
-                    try
-                    {
-                        file.Delete();
-                    }
-                    catch
-                    {
-                        // Ignore if file is in use
-                    }
-                }
-            }
-        }
-        catch
-        {
-            // Ignore cleanup errors
-        }
-    }
-
-    private void UpdateScreenPreview(string imagePath)
+    private void UpdateScreenPreview(Bitmap bitmap)
     {
         try
         {
             Application.Current?.Dispatcher.Invoke(() =>
             {
-                var bitmap = new BitmapImage();
-                bitmap.BeginInit();
-                bitmap.CacheOption = BitmapCacheOption.OnLoad;
-                bitmap.UriSource = new Uri(imagePath);
-                bitmap.EndInit();
-                bitmap.Freeze();
-                ScreenPreview = bitmap;
+                ScreenPreview = bitmap.ToBitmapImage();
             });
         }
-        catch
+        catch (Exception ex)
         {
-            // Ignore preview errors
+            // Log error but don't crash
+            Debug.WriteLine($"Preview error: {ex.Message}");
         }
     }
+
+
 
     /// <summary>
     /// Flow NTH Full: Tổng hợp tất cả các bước
@@ -1353,12 +1313,7 @@ public partial class MainViewModel : ObservableObject
         try
         {
             using var screenshot = _visionService.CaptureScreen();
-            var timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss_fff");
-            var filename = $"screenshot_{timestamp}.png";
-            var filepath = Path.Combine(_screenshotsFolder, filename);
-            screenshot.Save(filepath, ImageFormat.Png);
-            CleanupOldScreenshots();
-            UpdateScreenPreview(filepath);
+            UpdateScreenPreview(screenshot);
         }
         catch { }
     }
