@@ -23,7 +23,7 @@ namespace GameAutomation.UI.WPF.ViewModels;
 
 public partial class MainViewModel : ObservableObject
 {
-    private readonly VisionService _visionService;
+    private readonly IVisionService _visionService;
     private readonly string _screenshotsFolder;
     private readonly string _templatesFolder;
     private const int MaxScreenshots = 3;
@@ -69,11 +69,14 @@ public partial class MainViewModel : ObservableObject
 
     public ObservableCollection<WorkflowViewModel> Workflows { get; } = new();
 
-    public MainViewModel()
+    public MainViewModel(
+        IVisionService visionService, 
+        BotConfiguration configuration,
+        RegionConfigService regionConfigService)
     {
-        _visionService = new VisionService();
-        _configuration = new BotConfiguration();
-        _regionConfigService = new RegionConfigService();
+        _visionService = visionService;
+        _configuration = configuration;
+        _regionConfigService = regionConfigService;
 
         var baseDir = AppDomain.CurrentDomain.BaseDirectory;
         _screenshotsFolder = Path.Combine(baseDir, "Screenshots");
