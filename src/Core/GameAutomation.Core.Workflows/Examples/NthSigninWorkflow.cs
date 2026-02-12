@@ -31,6 +31,7 @@ public class NthSigninWorkflow : IWorkflow
     private const string LoginButtonTemplate = "03_loginbutton.png";
     private const string CheckboxTemplate = "04_checkbox.png";
     private const string AgreeButtonTemplate = "05_agree.png";
+    private const string ClosePoster2Template = "05_closeposter.png";
     private const string StartButtonTemplate = "06_startbutton.png";
     private const string BackButtonTemplate = "07_backbutton.png";
     private const string StartButton2Template = "08_startbutton2.png";
@@ -168,12 +169,58 @@ public class NthSigninWorkflow : IWorkflow
                 Log("[NTH Signin] No checkbox popup, continuing...");
             }
 
-            // Step 8: Find and click start button
-            Log("[NTH Signin] Step 7: Finding start button...");
-            var startButton = await WaitAndClickMultiScaleAsync(
-                StartButtonTemplate,
-                timeoutMs: 10000,
-                cancellationToken);
+            // Step 8: Check for close poster OR start button (parallel search, 5s)
+            Log("[NTH Signin] Step 7: Checking for close poster / start button...");
+            DetectionResult? closePoster = null;
+            DetectionResult? startButton = null;
+
+            var searchEndTime = DateTime.Now.AddMilliseconds(5000);
+            while (DateTime.Now < searchEndTime)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                // Try to find both templates each iteration
+                var closePosterTask = FindMultiScaleOnceAsync(ClosePoster2Template, cancellationToken);
+                var startButtonTask = FindMultiScaleOnceAsync(StartButtonTemplate, cancellationToken);
+                await Task.WhenAll(closePosterTask, startButtonTask);
+
+                closePoster = closePosterTask.Result;
+                startButton = startButtonTask.Result;
+
+                if (closePoster != null || startButton != null)
+                    break;
+
+                await Task.Delay(300, cancellationToken);
+            }
+
+            if (closePoster != null)
+            {
+                // Close poster found -> click it first, then find start button
+                Log("[NTH Signin] Close poster found, clicking...");
+                await ClickAtCenterAsync(closePoster);
+                await Task.Delay(1000, cancellationToken);
+
+                Log("[NTH Signin] Now finding start button...");
+                startButton = await WaitAndClickMultiScaleAsync(
+                    StartButtonTemplate,
+                    timeoutMs: 10000,
+                    cancellationToken);
+            }
+            else if (startButton != null)
+            {
+                // Start button found directly -> click it
+                Log("[NTH Signin] Start button found directly, clicking...");
+                await ClickAtCenterAsync(startButton);
+            }
+            else
+            {
+                // Neither found in 5s, try start button with longer timeout
+                Log("[NTH Signin] Neither found in 5s, searching start button (10s)...");
+                startButton = await WaitAndClickMultiScaleAsync(
+                    StartButtonTemplate,
+                    timeoutMs: 10000,
+                    cancellationToken);
+            }
 
             if (startButton == null)
             {
@@ -385,6 +432,41 @@ public class NthSigninWorkflow : IWorkflow
         }
 
         return null;
+    }
+
+    /// <summary>
+    /// Single-shot find: capture one screenshot and check for template (no retry loop)
+    /// </summary>
+    private Task<DetectionResult?> FindMultiScaleOnceAsync(
+        string templateFileName,
+        CancellationToken cancellationToken)
+    {
+        var templatePath = Path.Combine(_assetsPath, templateFileName);
+        if (!File.Exists(templatePath))
+            return Task.FromResult<DetectionResult?>(null);
+
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var templateKey = $"signin/{Path.GetFileNameWithoutExtension(templateFileName)}";
+        var searchRegion = GetEffectiveRegion(templateKey);
+
+        using var screenshot = _visionService.CaptureScreen();
+        var results = _visionService.FindTemplateMultiScaleInRegion(
+            screenshot,
+            templatePath,
+            searchRegion,
+            MatchThreshold,
+            MinScale,
+            MaxScale,
+            ScaleSteps);
+
+        if (results.Count > 0)
+        {
+            var best = GetBestMatch(results, templatePath);
+            return Task.FromResult<DetectionResult?>(best);
+        }
+
+        return Task.FromResult<DetectionResult?>(null);
     }
 
     /// <summary>
