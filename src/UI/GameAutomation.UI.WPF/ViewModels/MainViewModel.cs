@@ -89,6 +89,7 @@ public partial class MainViewModel : ObservableObject
         InitializeRegionConfigAsync();
 
         // Add workflows - truyền reference để gọi command
+        Workflows.Add(new WorkflowViewModel("NTH Diem Danh", this));
         Workflows.Add(new WorkflowViewModel("NTH Full Flow", this));  // Full flow đầu tiên
         Workflows.Add(new WorkflowViewModel("Open Excel Flow", this));
         Workflows.Add(new WorkflowViewModel("NTH Sign-in Flow", this));
@@ -99,7 +100,6 @@ public partial class MainViewModel : ObservableObject
         Workflows.Add(new WorkflowViewModel("NTH Lv26-44 Daily", this));
         Workflows.Add(new WorkflowViewModel("NTH Dungoan", this));
         Workflows.Add(new WorkflowViewModel("NTH Signout", this));
-        Workflows.Add(new WorkflowViewModel("NTH Diem Danh", this));
         Workflows.Add(new WorkflowViewModel("Auto-Farm Workflow", this));
         Workflows.Add(new WorkflowViewModel("Combat Sequence", this));
 
