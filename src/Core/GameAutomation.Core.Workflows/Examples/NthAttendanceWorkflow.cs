@@ -125,6 +125,19 @@ public class NthAttendanceWorkflow
                 var (username, password) = credentials.Value;
                 Log($"[Diem Danh] Row {currentRow}: Logging in as {username}...");
 
+                // Step 2.5: Mark as "dang diem danh" to prevent other processes
+                try
+                {
+                    await _sheetsService.WriteCellAsync(
+                        _spreadsheetId, sheetName, currentRow, dateColIndex,
+                        "dang diem danh");
+                    Log($"[Diem Danh] Row {currentRow}: Marked 'dang diem danh' in column {dateColLetter}.");
+                }
+                catch (Exception ex)
+                {
+                    Log($"[Diem Danh] Row {currentRow}: Failed to mark in-progress: {ex.Message}");
+                }
+
                 // Step 3: Sign-in
                 var signinWorkflow = new NthSigninWorkflow(
                     _visionService,
