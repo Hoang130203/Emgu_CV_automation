@@ -7,6 +7,7 @@ using GameAutomation.Core.Services.Configuration;
 using GameAutomation.Core.Services.Input;
 using GameAutomation.Core.Services.Vision;
 using GameAutomation.Core.Services.Excel;
+using GameAutomation.Core.Services.GoogleSheets;
 using GameAutomation.Core.Workflows.Examples;
 using GameAutomation.UI.WPF;
 using GameAutomation.UI.WPF.Dialogs;
@@ -98,6 +99,7 @@ public partial class MainViewModel : ObservableObject
         Workflows.Add(new WorkflowViewModel("NTH Lv26-44 Daily", this));
         Workflows.Add(new WorkflowViewModel("NTH Dungoan", this));
         Workflows.Add(new WorkflowViewModel("NTH Signout", this));
+        Workflows.Add(new WorkflowViewModel("NTH Diem Danh", this));
         Workflows.Add(new WorkflowViewModel("Auto-Farm Workflow", this));
         Workflows.Add(new WorkflowViewModel("Combat Sequence", this));
 
@@ -296,6 +298,9 @@ public partial class MainViewModel : ObservableObject
                 break;
             case "NTH Signout":
                 await RunNthSignoutFlowAsync(workflow);
+                break;
+            case "NTH Diem Danh":
+                await RunNthAttendanceFlowAsync(workflow);
                 break;
             case "Auto-Farm Workflow":
                 AddLog($"[{workflow.Name}] Not implemented yet.");
@@ -1272,6 +1277,137 @@ public partial class MainViewModel : ObservableObject
         catch (Exception ex)
         {
             AddLog($"[NTH Signout] Error: {ex.Message}");
+            workflow.Status = "Error";
+            RestoreMainWindow();
+        }
+    }
+
+    /// <summary>
+    /// Flow NTH Diem Danh: Dang nhap -> Doi menu button -> Dang xuat -> Ghi diem danh Google Sheets
+    /// Loop qua cac dong trong Google Sheets
+    /// </summary>
+    private async Task RunNthAttendanceFlowAsync(WorkflowViewModel workflow)
+    {
+        if (_botCancellationTokenSource == null || _botCancellationTokenSource.IsCancellationRequested)
+        {
+            AddLog("[NTH Diem Danh] Bot not running.");
+            return;
+        }
+
+        // Show input dialog on UI thread
+        string? sheetName = null;
+        int startRow = 2;
+        bool dialogResult = false;
+
+        await Application.Current.Dispatcher.InvokeAsync(() =>
+        {
+            var dialog = new AttendanceInputDialog
+            {
+                Owner = Application.Current.MainWindow
+            };
+
+            if (dialog.ShowDialog() == true)
+            {
+                sheetName = dialog.SheetName;
+                startRow = dialog.StartRow;
+                dialogResult = true;
+            }
+        });
+
+        if (!dialogResult)
+        {
+            AddLog("[NTH Diem Danh] Cancelled by user.");
+            return;
+        }
+
+        // Minimize app to allow screen capture of game
+        Application.Current.Dispatcher.Invoke(() =>
+        {
+            Application.Current.MainWindow.WindowState = WindowState.Minimized;
+        });
+
+        await Task.Delay(500);
+
+        workflow.Status = "Running";
+        var token = _botCancellationTokenSource.Token;
+
+        try
+        {
+            AddLog("[NTH Diem Danh] Starting attendance workflow...");
+            AddLog($"  Sheet: {sheetName}, Start Row: {startRow}");
+
+            await Task.Run(async () =>
+            {
+                // Read spreadsheet ID from config file
+                var configPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "sheets_config.json");
+                string spreadsheetId;
+
+                if (File.Exists(configPath))
+                {
+                    var configJson = await File.ReadAllTextAsync(configPath, token);
+                    var config = System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.JsonElement>(configJson);
+                    spreadsheetId = config.GetProperty("spreadsheetId").GetString() ?? "";
+                }
+                else
+                {
+                    AddLog("[NTH Diem Danh] ERROR: sheets_config.json not found. Create it with: {\"spreadsheetId\": \"YOUR_SHEET_ID\"}");
+                    UpdateWorkflowStatus(workflow, "Failed");
+                    RestoreMainWindow();
+                    return;
+                }
+
+                var inputService = new InputService();
+                GoogleSheetsService sheetsService;
+
+                try
+                {
+                    sheetsService = new GoogleSheetsService();
+                }
+                catch (Exception ex)
+                {
+                    AddLog($"[NTH Diem Danh] ERROR: Failed to initialize Google Sheets: {ex.Message}");
+                    AddLog("  Make sure credentials.json is in the app directory.");
+                    UpdateWorkflowStatus(workflow, "Failed");
+                    RestoreMainWindow();
+                    return;
+                }
+
+                var attendanceWorkflow = new NthAttendanceWorkflow(
+                    _visionService,
+                    inputService,
+                    _templatesFolder,
+                    sheetsService,
+                    spreadsheetId,
+                    logger: msg => AddLog(msg));
+
+                var result = await attendanceWorkflow.ExecuteAsync(
+                    sheetName!,
+                    startRow,
+                    token);
+
+                if (result.Success)
+                {
+                    AddLog($"[NTH Diem Danh] Completed: {result.Message}");
+                    UpdateWorkflowStatus(workflow, "Ready", incrementExecution: true);
+                }
+                else
+                {
+                    AddLog($"[NTH Diem Danh] Failed: {result.Message}");
+                    UpdateWorkflowStatus(workflow, "Failed");
+                }
+
+                RestoreMainWindow();
+            }, token);
+        }
+        catch (OperationCanceledException)
+        {
+            AddLog("[NTH Diem Danh] Cancelled.");
+            workflow.Status = "Cancelled";
+            RestoreMainWindow();
+        }
+        catch (Exception ex)
+        {
+            AddLog($"[NTH Diem Danh] Error: {ex.Message}");
             workflow.Status = "Error";
             RestoreMainWindow();
         }
